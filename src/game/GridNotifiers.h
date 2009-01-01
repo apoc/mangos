@@ -449,7 +449,7 @@ namespace MaNGOS
     class CannibalizeObjectCheck
     {
         public:
-            CannibalizeObjectCheck(Unit* funit, float range) : i_funit(funit), i_range(range) {}
+            CannibalizeObjectCheck(WorldObject* /*foo*/, Unit* funit, float range) : i_funit(funit), i_range(range) {}
             bool operator()(Player* u)
             {
                 if( i_funit->IsFriendlyTo(u) || u->isAlive() || u->isInFlight() )

@@ -467,25 +467,9 @@ void Spell::FillTargetMap()
                             SpellRangeEntry const* srange = sSpellRangeStore.LookupEntry(m_spellInfo->rangeIndex);
                             float max_range = GetSpellMaxRange(srange);
 
-                            CellPair p(MaNGOS::ComputeCellPair(m_caster->GetPositionX(), m_caster->GetPositionY()));
-                            Cell cell(p);
-                            cell.data.Part.reserved = ALL_DISTRICT;
-                            cell.SetNoCreate();
-
                             WorldObject* result = NULL;
-
-                            MaNGOS::CannibalizeObjectCheck u_check(m_caster, max_range);
-                            MaNGOS::WorldObjectSearcher<MaNGOS::CannibalizeObjectCheck > searcher(result, u_check);
-
-                            TypeContainerVisitor<MaNGOS::WorldObjectSearcher<MaNGOS::CannibalizeObjectCheck >, GridTypeMapContainer > grid_searcher(searcher);
-                            CellLock<GridReadGuard> cell_lock(cell, p);
-                            cell_lock->Visit(cell_lock, grid_searcher, *m_caster->GetMap());
-
-                            if(!result)
-                            {
-                                TypeContainerVisitor<MaNGOS::WorldObjectSearcher<MaNGOS::CannibalizeObjectCheck >, WorldTypeMapContainer > world_searcher(searcher);
-                                cell_lock->Visit(cell_lock, world_searcher, *m_caster->GetMap());
-                            }
+                            SpellTargetCellSeacher<MaNGOS::CannibalizeObjectCheck, MaNGOS::WorldObjectSearcher< MaNGOS::CannibalizeObjectCheck >, WorldObject* > searcher(m_caster, NULL, max_range);
+                            searcher.Search(result);
 
                             if(result)
                             {
@@ -1301,27 +1285,11 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
             m_targets.m_targetMask = 0;
             unMaxTargets = EffectChainTarget;
             float max_range = radius + unMaxTargets * CHAIN_SPELL_JUMP_RADIUS;
-
-            CellPair p(MaNGOS::ComputeCellPair(m_caster->GetPositionX(), m_caster->GetPositionY()));
-            Cell cell(p);
-            cell.data.Part.reserved = ALL_DISTRICT;
-            cell.SetNoCreate();
+            SpellTargetCellSeacher< MaNGOS::AnyAoETargetUnitInObjectRangeCheck, MaNGOS::UnitListSearcher< MaNGOS::AnyAoETargetUnitInObjectRangeCheck > > searcher(m_caster, m_caster, max_range);
 
             std::list<Unit *> tempUnitMap;
-
-            {
-                MaNGOS::AnyAoETargetUnitInObjectRangeCheck u_check(m_caster, m_caster, max_range);
-                MaNGOS::UnitListSearcher<MaNGOS::AnyAoETargetUnitInObjectRangeCheck> searcher(tempUnitMap, u_check);
-
-                TypeContainerVisitor<MaNGOS::UnitListSearcher<MaNGOS::AnyAoETargetUnitInObjectRangeCheck>, WorldTypeMapContainer > world_unit_searcher(searcher);
-                TypeContainerVisitor<MaNGOS::UnitListSearcher<MaNGOS::AnyAoETargetUnitInObjectRangeCheck>, GridTypeMapContainer >  grid_unit_searcher(searcher);
-
-                CellLock<GridReadGuard> cell_lock(cell, p);
-                cell_lock->Visit(cell_lock, world_unit_searcher, *m_caster->GetMap());
-                cell_lock->Visit(cell_lock, grid_unit_searcher, *m_caster->GetMap());
-            }
-
-            if(tempUnitMap.empty())
+            searcher.Search(tempUnitMap);
+            if (tempUnitMap.empty())
                 break;
 
             tempUnitMap.sort(TargetDistanceOrder(m_caster));
@@ -1386,7 +1354,8 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
             else
             {
                 Unit* pUnitTarget = m_targets.getUnitTarget();
-                if(!pUnitTarget)
+                Unit* originalCaster = GetOriginalCaster();
+                if(!pUnitTarget || !originalCaster)
                     break;
 
                 unMaxTargets = EffectChainTarget;
@@ -1398,60 +1367,38 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
                     //FIXME: This very like horrible hack and wrong for most spells
                     max_range = radius + unMaxTargets * CHAIN_SPELL_JUMP_RADIUS;
 
-                CellPair p(MaNGOS::ComputeCellPair(m_caster->GetPositionX(), m_caster->GetPositionY()));
-                Cell cell(p);
-                cell.data.Part.reserved = ALL_DISTRICT;
-                cell.SetNoCreate();
+                std::list<Unit *> tempUnitMap;
+                SpellTargetCellSeacher< MaNGOS::AnyAoETargetUnitInObjectRangeCheck, MaNGOS::UnitListSearcher< MaNGOS::AnyAoETargetUnitInObjectRangeCheck > > searcher(originalCaster, pUnitTarget, max_range);
+                searcher.Search(tempUnitMap);
+                if (tempUnitMap.empty())
+                    break;
 
-                Unit* originalCaster = GetOriginalCaster();
-                if(originalCaster)
+                if(*tempUnitMap.begin() == pUnitTarget)
+                    tempUnitMap.erase(tempUnitMap.begin());
+
+                TagUnitMap.push_back(pUnitTarget);
+                uint32 t = unMaxTargets - 1;
+                Unit *prev = pUnitTarget;
+                std::list<Unit*>::iterator next = tempUnitMap.begin();
+
+                while(t && next != tempUnitMap.end() )
                 {
-                    std::list<Unit *> tempUnitMap;
-
-                    {
-                        MaNGOS::AnyAoETargetUnitInObjectRangeCheck u_check(pUnitTarget, originalCaster, max_range);
-                        MaNGOS::UnitListSearcher<MaNGOS::AnyAoETargetUnitInObjectRangeCheck> searcher(tempUnitMap, u_check);
-
-                        TypeContainerVisitor<MaNGOS::UnitListSearcher<MaNGOS::AnyAoETargetUnitInObjectRangeCheck>, WorldTypeMapContainer > world_unit_searcher(searcher);
-                        TypeContainerVisitor<MaNGOS::UnitListSearcher<MaNGOS::AnyAoETargetUnitInObjectRangeCheck>, GridTypeMapContainer >  grid_unit_searcher(searcher);
-
-                        CellLock<GridReadGuard> cell_lock(cell, p);
-                        cell_lock->Visit(cell_lock, world_unit_searcher, *m_caster->GetMap());
-                        cell_lock->Visit(cell_lock, grid_unit_searcher, *m_caster->GetMap());
-                    }
-
-                    tempUnitMap.sort(TargetDistanceOrder(pUnitTarget));
-
-                    if(tempUnitMap.empty())
+                    if(prev->GetDistance(*next) > CHAIN_SPELL_JUMP_RADIUS)
                         break;
 
-                    if(*tempUnitMap.begin() == pUnitTarget)
-                        tempUnitMap.erase(tempUnitMap.begin());
-
-                    TagUnitMap.push_back(pUnitTarget);
-                    uint32 t = unMaxTargets - 1;
-                    Unit *prev = pUnitTarget;
-                    std::list<Unit*>::iterator next = tempUnitMap.begin();
-
-                    while(t && next != tempUnitMap.end() )
+                    if(!prev->IsWithinLOSInMap(*next))
                     {
-                        if(prev->GetDistance(*next) > CHAIN_SPELL_JUMP_RADIUS)
-                            break;
-
-                        if(!prev->IsWithinLOSInMap(*next))
-                        {
-                            ++next;
-                            continue;
-                        }
-
-                        prev = *next;
-                        TagUnitMap.push_back(prev);
-                        tempUnitMap.erase(next);
-                        tempUnitMap.sort(TargetDistanceOrder(prev));
-                        next = tempUnitMap.begin();
-
-                        --t;
+                        ++next;
+                        continue;
                     }
+
+                    prev = *next;
+                    TagUnitMap.push_back(prev);
+                    tempUnitMap.erase(next);
+                    tempUnitMap.sort(TargetDistanceOrder(prev));
+                    next = tempUnitMap.begin();
+
+                    --t;
                 }
             }
         }break;
@@ -1473,26 +1420,11 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
         }break;
         case TARGET_ALL_ENEMY_IN_AREA_INSTANT:
         {
-            // targets the ground, not the units in the area
-            if (m_spellInfo->Effect[i]!=SPELL_EFFECT_PERSISTENT_AREA_AURA)
-            {
-                CellPair p(MaNGOS::ComputeCellPair(m_targets.m_destX, m_targets.m_destY));
-                Cell cell(p);
-                cell.data.Part.reserved = ALL_DISTRICT;
-                cell.SetNoCreate();
+            if (m_spellInfo->Effect[i] == SPELL_EFFECT_PERSISTENT_AREA_AURA)
+                break;
 
-                MaNGOS::SpellNotifierCreatureAndPlayer notifier(*this, TagUnitMap, radius, PUSH_DEST_CENTER,SPELL_TARGETS_AOE_DAMAGE);
-
-                TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, WorldTypeMapContainer > world_object_notifier(notifier);
-                TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, GridTypeMapContainer >  grid_object_notifier(notifier);
-
-                CellLock<GridReadGuard> cell_lock(cell, p);
-                cell_lock->Visit(cell_lock, world_object_notifier, *m_caster->GetMap());
-                cell_lock->Visit(cell_lock, grid_object_notifier, *m_caster->GetMap());
-
-                // exclude caster (this can be important if this not original caster)
-                TagUnitMap.remove(m_caster);
-            }
+            SpellTargetCellNotifier notifier(this, radius);
+            notifier.Notify(TagUnitMap, m_targets.m_destX, m_targets.m_destY, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
         }break;
         case TARGET_DUELVSPLAYER_COORDINATES:
         {
@@ -1567,35 +1499,13 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
         }break;
         case TARGET_ALL_FRIENDLY_UNITS_AROUND_CASTER:
         {
-            CellPair p(MaNGOS::ComputeCellPair(m_targets.m_destX, m_targets.m_destY));
-            Cell cell(p);
-            cell.data.Part.reserved = ALL_DISTRICT;
-            cell.SetNoCreate();
-
-            MaNGOS::SpellNotifierCreatureAndPlayer notifier(*this, TagUnitMap, radius, PUSH_SELF_CENTER,SPELL_TARGETS_FRIENDLY);
-
-            TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, WorldTypeMapContainer > world_object_notifier(notifier);
-            TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, GridTypeMapContainer >  grid_object_notifier(notifier);
-
-            CellLock<GridReadGuard> cell_lock(cell, p);
-            cell_lock->Visit(cell_lock, world_object_notifier, *m_caster->GetMap());
-            cell_lock->Visit(cell_lock, grid_object_notifier, *m_caster->GetMap());
+            SpellTargetCellNotifier notifier(this, radius);
+            notifier.Notify(TagUnitMap, m_caster->GetPositionX(), m_caster->GetPositionY(), PUSH_SELF_CENTER, SPELL_TARGETS_FRIENDLY);
         }break;
         case TARGET_ALL_FRIENDLY_UNITS_IN_AREA:
         {
-            CellPair p(MaNGOS::ComputeCellPair(m_targets.m_destX, m_targets.m_destY));
-            Cell cell(p);
-            cell.data.Part.reserved = ALL_DISTRICT;
-            cell.SetNoCreate();
-
-            MaNGOS::SpellNotifierCreatureAndPlayer notifier(*this, TagUnitMap, radius, PUSH_DEST_CENTER,SPELL_TARGETS_FRIENDLY);
-
-            TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, WorldTypeMapContainer > world_object_notifier(notifier);
-            TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, GridTypeMapContainer >  grid_object_notifier(notifier);
-
-            CellLock<GridReadGuard> cell_lock(cell, p);
-            cell_lock->Visit(cell_lock, world_object_notifier, *m_caster->GetMap());
-            cell_lock->Visit(cell_lock, grid_object_notifier, *m_caster->GetMap());
+            SpellTargetCellNotifier notifier(this, radius);
+            notifier.Notify(TagUnitMap, m_targets.m_destX, m_targets.m_destY, PUSH_DEST_CENTER, SPELL_TARGETS_FRIENDLY);
         }break;
         // TARGET_SINGLE_PARTY means that the spells can only be casted on a party member and not on the caster (some seals, fire shield from imp, etc..)
         case TARGET_SINGLE_PARTY:
@@ -1659,20 +1569,10 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
         }break;
         case TARGET_IN_FRONT_OF_CASTER:
         {
-            CellPair p(MaNGOS::ComputeCellPair(m_caster->GetPositionX(), m_caster->GetPositionY()));
-            Cell cell(p);
-            cell.data.Part.reserved = ALL_DISTRICT;
-            cell.SetNoCreate();
-
             bool inFront = m_spellInfo->SpellVisual[0] != 3879;
-            MaNGOS::SpellNotifierCreatureAndPlayer notifier(*this, TagUnitMap, radius, inFront ? PUSH_IN_FRONT : PUSH_IN_BACK,SPELL_TARGETS_AOE_DAMAGE);
 
-            TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, WorldTypeMapContainer > world_object_notifier(notifier);
-            TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, GridTypeMapContainer >  grid_object_notifier(notifier);
-
-            CellLock<GridReadGuard> cell_lock(cell, p);
-            cell_lock->Visit(cell_lock, world_object_notifier, *m_caster->GetMap());
-            cell_lock->Visit(cell_lock, grid_object_notifier, *m_caster->GetMap());
+            SpellTargetCellNotifier notifier(this, radius);
+            notifier.Notify(TagUnitMap, m_caster->GetPositionX(), m_caster->GetPositionY(), inFront ? PUSH_IN_FRONT : PUSH_IN_BACK, SPELL_TARGETS_AOE_DAMAGE);
         }break;
         case TARGET_DUELVSPLAYER:
         {
@@ -1710,19 +1610,8 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
             // targets the ground, not the units in the area
             if (m_spellInfo->Effect[i]!=SPELL_EFFECT_PERSISTENT_AREA_AURA)
             {
-                CellPair p(MaNGOS::ComputeCellPair(m_targets.m_destX, m_targets.m_destY));
-                Cell cell(p);
-                cell.data.Part.reserved = ALL_DISTRICT;
-                cell.SetNoCreate();
-
-                MaNGOS::SpellNotifierCreatureAndPlayer notifier(*this, TagUnitMap, radius, PUSH_DEST_CENTER,SPELL_TARGETS_AOE_DAMAGE);
-
-                TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, WorldTypeMapContainer > world_object_notifier(notifier);
-                TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, GridTypeMapContainer >  grid_object_notifier(notifier);
-
-                CellLock<GridReadGuard> cell_lock(cell, p);
-                cell_lock->Visit(cell_lock, world_object_notifier, *m_caster->GetMap());
-                cell_lock->Visit(cell_lock, grid_object_notifier, *m_caster->GetMap());
+                SpellTargetCellNotifier notifier(this, radius);
+                notifier.Notify(TagUnitMap, m_caster->GetPositionX(), m_caster->GetPositionY(), PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
             }
         }break;
         case TARGET_MINION:
@@ -1827,23 +1716,8 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
                 float max_range = radius + unMaxTargets * CHAIN_SPELL_JUMP_RADIUS;
 
                 std::list<Unit *> tempUnitMap;
-
-                {
-                    CellPair p(MaNGOS::ComputeCellPair(m_caster->GetPositionX(), m_caster->GetPositionY()));
-                    Cell cell(p);
-                    cell.data.Part.reserved = ALL_DISTRICT;
-                    cell.SetNoCreate();
-
-                    MaNGOS::SpellNotifierCreatureAndPlayer notifier(*this, tempUnitMap, max_range, PUSH_SELF_CENTER, SPELL_TARGETS_FRIENDLY);
-
-                    TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, WorldTypeMapContainer > world_object_notifier(notifier);
-                    TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, GridTypeMapContainer >  grid_object_notifier(notifier);
-
-                    CellLock<GridReadGuard> cell_lock(cell, p);
-                    cell_lock->Visit(cell_lock, world_object_notifier, *m_caster->GetMap());
-                    cell_lock->Visit(cell_lock, grid_object_notifier, *m_caster->GetMap());
-
-                }
+                SpellTargetCellNotifier notifier(this, max_range);
+                notifier.Notify(tempUnitMap, m_caster->GetPositionX(), m_caster->GetPositionY(), PUSH_SELF_CENTER, SPELL_TARGETS_FRIENDLY);
 
                 if(m_caster != pUnitTarget && std::find(tempUnitMap.begin(),tempUnitMap.end(),m_caster) == tempUnitMap.end() )
                     tempUnitMap.push_front(m_caster);
@@ -1891,24 +1765,17 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
         case TARGET_CURRENT_ENEMY_COORDINATES:
         {
             Unit* currentTarget = m_targets.getUnitTarget();
-            if(currentTarget)
-            {
-                TagUnitMap.push_back(currentTarget);
-                m_targets.setDestination(currentTarget->GetPositionX(), currentTarget->GetPositionY(), currentTarget->GetPositionZ());
-                if(m_spellInfo->EffectImplicitTargetB[i]==TARGET_ALL_ENEMY_IN_AREA_INSTANT)
-                {
-                    CellPair p(MaNGOS::ComputeCellPair(currentTarget->GetPositionX(), currentTarget->GetPositionY()));
-                    Cell cell(p);
-                    cell.data.Part.reserved = ALL_DISTRICT;
-                    cell.SetNoCreate();
-                    MaNGOS::SpellNotifierCreatureAndPlayer notifier(*this, TagUnitMap, radius,PUSH_TARGET_CENTER, SPELL_TARGETS_AOE_DAMAGE);
-                    TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, WorldTypeMapContainer > world_notifier(notifier);
-                    TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, GridTypeMapContainer > grid_notifier(notifier);
-                    CellLock<GridReadGuard> cell_lock(cell, p);
-                    cell_lock->Visit(cell_lock, world_notifier, *m_caster->GetMap());
-                    cell_lock->Visit(cell_lock, grid_notifier, *m_caster->GetMap());
-                }
-            }
+            if (!currentTarget)
+                break;
+
+            TagUnitMap.push_back(currentTarget);
+            m_targets.setDestination(currentTarget->GetPositionX(), currentTarget->GetPositionY(), currentTarget->GetPositionZ());
+
+            if (m_spellInfo->EffectImplicitTargetB[i] != TARGET_ALL_ENEMY_IN_AREA_INSTANT)
+                break;
+
+            SpellTargetCellNotifier notifier(this, radius);
+            notifier.Notify(TagUnitMap, currentTarget->GetPositionX(), currentTarget->GetPositionY(), PUSH_TARGET_CENTER, SPELL_TARGETS_AOE_DAMAGE);
         }break;
         case TARGET_AREAEFFECT_PARTY_AND_CLASS:
         {
@@ -1938,36 +1805,19 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
         case TARGET_TABLE_X_Y_Z_COORDINATES:
         {
             SpellTargetPosition const* st = spellmgr.GetSpellTargetPosition(m_spellInfo->Id);
-            if(st)
+            if (!st)
             {
-                if (st->target_mapId == m_caster->GetMapId())
-                    m_targets.setDestination(st->target_X, st->target_Y, st->target_Z);
-
-                // if B==TARGET_TABLE_X_Y_Z_COORDINATES then A already fill all required targets
-                if (m_spellInfo->EffectImplicitTargetB[i] && m_spellInfo->EffectImplicitTargetB[i]!=TARGET_TABLE_X_Y_Z_COORDINATES)
-                {
-                    CellPair p(MaNGOS::ComputeCellPair(m_caster->GetPositionX(), m_caster->GetPositionY()));
-                    Cell cell(p);
-                    cell.data.Part.reserved = ALL_DISTRICT;
-                    cell.SetNoCreate();
-
-                    SpellTargets targetB = SPELL_TARGETS_AOE_DAMAGE;
-                    // Select friendly targets for positive effect
-                    if (IsPositiveEffect(m_spellInfo->Id, i))
-                        targetB = SPELL_TARGETS_FRIENDLY;
-
-                    MaNGOS::SpellNotifierCreatureAndPlayer notifier(*this, TagUnitMap, radius,PUSH_DEST_CENTER, targetB);
-
-                    TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, WorldTypeMapContainer > world_notifier(notifier);
-                    TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, GridTypeMapContainer > grid_notifier(notifier);
-
-                    CellLock<GridReadGuard> cell_lock(cell, p);
-                    cell_lock->Visit(cell_lock, world_notifier, *m_caster->GetMap());
-                    cell_lock->Visit(cell_lock, grid_notifier, *m_caster->GetMap());
-                }
-            }
-            else
                 sLog.outError( "SPELL: unknown target coordinates for spell ID %u\n", m_spellInfo->Id );
+                break;
+            }
+
+            if (st->target_mapId == m_caster->GetMapId())
+                m_targets.setDestination(st->target_X, st->target_Y, st->target_Z);
+            if (!m_spellInfo->EffectImplicitTargetB[i] || m_spellInfo->EffectImplicitTargetB[i] == TARGET_TABLE_X_Y_Z_COORDINATES)
+                break;
+
+            SpellTargetCellNotifier notifier(this, radius);
+            notifier.Notify(TagUnitMap, m_caster->GetPositionX(), m_caster->GetPositionY(), PUSH_DEST_CENTER, (SpellTargets)m_spellInfo->EffectImplicitTargetB[i]);
         }break;
         case TARGET_BEHIND_VICTIM:
         {

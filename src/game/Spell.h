@@ -736,4 +736,62 @@ class SpellEvent : public BasicEvent
     protected:
         Spell* m_Spell;
 };
+
+template <class CHECKER, class SEARCHER, class RESULT = std::list<Unit*> >
+class SpellTargetCellSeacher
+{
+    public:
+        SpellTargetCellSeacher(Unit* caster, WorldObject* target, float range) : m_caster(caster), m_target(target), m_range(range) { }
+        void Search(RESULT& result)
+        {
+            CellPair p(MaNGOS::ComputeCellPair(m_caster->GetPositionX(), m_caster->GetPositionY()));
+            Cell cell(p);
+            cell.data.Part.reserved = ALL_DISTRICT;
+            cell.SetNoCreate();
+
+            CHECKER  u_check(m_target, m_caster, m_range);
+            SEARCHER searcher(result, u_check);
+
+            TypeContainerVisitor< SEARCHER, WorldTypeMapContainer > world_unit_searcher(searcher);
+            TypeContainerVisitor< SEARCHER, GridTypeMapContainer >  grid_unit_searcher(searcher);
+
+            CellLock<GridReadGuard> cell_lock(cell, p);
+            cell_lock->Visit(cell_lock, world_unit_searcher, *m_caster->GetMap());
+            cell_lock->Visit(cell_lock, grid_unit_searcher, *m_caster->GetMap());
+        }
+    private:
+        SpellTargetCellSeacher();
+
+        Unit*        m_caster;
+        WorldObject* m_target;
+        float        m_range;
+};
+
+class SpellTargetCellNotifier
+{
+    public:
+        SpellTargetCellNotifier(Spell* spell, float radius) : m_spell(spell), m_radius(radius) { }
+        inline void Notify(std::list<Unit*> &result, float x, float y, SpellNotifyPushType pType, SpellTargets sTargets)
+        {
+            CellPair p(MaNGOS::ComputeCellPair(x, y));
+            Cell cell(p);
+            cell.data.Part.reserved = ALL_DISTRICT;
+            cell.SetNoCreate();
+
+            MaNGOS::SpellNotifierCreatureAndPlayer notifier(*m_spell, result, m_radius, pType, sTargets);
+
+            TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, WorldTypeMapContainer > world_object_notifier(notifier);
+            TypeContainerVisitor<MaNGOS::SpellNotifierCreatureAndPlayer, GridTypeMapContainer >  grid_object_notifier(notifier);
+
+            CellLock<GridReadGuard> cell_lock(cell, p);
+            cell_lock->Visit(cell_lock, world_object_notifier, *m_spell->GetCaster()->GetMap());
+            cell_lock->Visit(cell_lock, grid_object_notifier, *m_spell->GetCaster()->GetMap());
+        }
+    private:
+        SpellTargetCellNotifier();
+
+        Spell* m_spell;
+        float  m_radius;
+};
+
 #endif
