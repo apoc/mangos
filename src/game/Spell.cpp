@@ -1289,6 +1289,11 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
                     notifier.Notify(TagUnitMap, m_targets.m_destX, m_targets.m_destY, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
                     break;
                 }
+                default:
+                {
+                    TagUnitMap.push_back(m_caster);
+                    break;
+                }
             }
             break;
         }
