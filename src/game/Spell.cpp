@@ -1273,6 +1273,11 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
         case TARGET_SELF:
         case TARGET_SELF2:
         case TARGET_DYNAMIC_OBJECT:
+        case TARGET_SUMMON:
+        {
+            TagUnitMap.push_back(m_caster);
+            break;
+        }
         case TARGET_AREAEFFECT_CUSTOM:
         case TARGET_AREAEFFECT_CUSTOM_2:
         {
@@ -1282,12 +1287,9 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
                 {
                     SpellTargetCellNotifier notifier(this, radius);
                     notifier.Notify(TagUnitMap, m_targets.m_destX, m_targets.m_destY, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
-                }break;
+                    break;
+                }
             }
-        }break;
-        case TARGET_SUMMON:
-        {
-            TagUnitMap.push_back(m_caster);
             break;
         }
         case TARGET_RANDOM_ENEMY_CHAIN_IN_AREA:
