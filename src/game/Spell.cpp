@@ -1283,7 +1283,8 @@ void Spell::SetTargetMap(uint32 i,uint32 cur,std::list<Unit*> &TagUnitMap)
         {
             switch (m_spellInfo->Id)
             {
-                case 33655:
+                case 40160: // Throw Bomb
+                case 33655: // Dropping The Nether Modulator
                 {
                     SpellTargetCellNotifier notifier(this, radius);
                     notifier.Notify(TagUnitMap, m_targets.m_destX, m_targets.m_destY, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
