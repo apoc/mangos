@@ -94,7 +94,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
             return false;
         }
 
-        //auctionbot.Command(AHB_CMD_AHEXPIRE, ahMapID, NULL, NULL);
+        auctionbot.Command(AHB_CMD_AHEXPIRE, ahMapID);
         return true;
     }
     else if (strncmp(opt,"minitems",l) == 0)
@@ -106,7 +106,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
             return false;
         }
 
-        //auctionbot.Command(AHB_CMD_MINITEMS, ahMapID, NULL, param1);
+        auctionbot.Command(AHB_CMD_MINITEMS, ahMapID, param1);
         return true;
     }
     else if (strncmp(opt,"maxitems",l) == 0)
@@ -118,7 +118,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
             return false;
         }
 
-        //auctionbot.Command(AHB_CMD_MAXITEMS, ahMapID, NULL, param1);
+        auctionbot.Command(AHB_CMD_MAXITEMS, ahMapID, param1);
         return true;
     }
     else if (strncmp(opt,"mintime",l) == 0)
@@ -130,7 +130,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
             return false;
         }
 
-        //auctionbot.Command(AHB_CMD_MINITEMS, ahMapID, NULL, param1);
+        auctionbot.Command(AHB_CMD_MINITEMS, ahMapID, param1);
         return true;
     }
     else if (strncmp(opt,"maxtime",l) == 0)
@@ -142,7 +142,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
             return false;
         }
 
-        //auctionbot.Command(AHB_CMD_MAXTIME, ahMapID, NULL, param1);
+        auctionbot.Command(AHB_CMD_MAXTIME, ahMapID, param1);
         return true;
     }
     else if (strncmp(opt,"percentages",l) == 0)
@@ -234,7 +234,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
         strcat(param, " ");
         strcat(param, param14);
 
-        //auctionbot.Command(AHB_CMD_PERCENTAGES, ahMapID, NULL, param);
+        auctionbot.Command(AHB_CMD_PERCENTAGES, ahMapID, param);
         return true;
     }
     else if (strncmp(opt,"minprice",l) == 0)
@@ -250,7 +250,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
             return false;
         }
 
-        //auctionbot.Command(AHB_CMD_MINPRICE, ahMapID, auctionbot.lookupColor(param1), param2);
+        auctionbot.Command(AHB_CMD_MINPRICE, ahMapID, param2, ItemQualities(auctionbot.lookupQuality(param1)));
         return true;
     }
     else if (strncmp(opt,"maxprice",l) == 0)
@@ -266,7 +266,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
             return false;
         }
 
-        //auctionbot.Command(AHB_CMD_MAXPRICE, ahMapID, auctionbot.lookupColor(param1), param2);
+        auctionbot.Command(AHB_CMD_MAXPRICE, ahMapID, param2, ItemQualities(auctionbot.lookupQuality(param1)));
         return true;
     }
     else if (strncmp(opt,"minbidprice",l) == 0)
@@ -289,7 +289,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
             return false;
         }
 
-        //auctionbot.Command(AHB_CMD_MINBIDPRICE, ahMapID, auctionbot.lookupColor(param1), param2);
+        auctionbot.Command(AHB_CMD_MINBIDPRICE, ahMapID, param2, ItemQualities(auctionbot.lookupQuality(param1)));
         return true;
     }
     else if (strncmp(opt,"maxbidprice",l) == 0)
@@ -312,7 +312,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
             return false;
         }
 
-        //auctionbot.Command(AHB_CMD_MAXBIDPRICE, ahMapID, auctionbot.lookupColor(param1), param2);
+        auctionbot.Command(AHB_CMD_MAXBIDPRICE, ahMapID, param2, ItemQualities(auctionbot.lookupQuality(param1)));
         return true;
     }
     else if (strncmp(opt,"maxstack",l) == 0)
@@ -334,7 +334,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
             return false;
         }
 
-        //auctionbot.Command(AHB_CMD_MAXSTACK, ahMapID, auctionbot.lookupColor(param1), param2);
+        auctionbot.Command(AHB_CMD_MAXSTACK, ahMapID, param2, ItemQualities(auctionbot.lookupQuality(param1)));
         return true;
     }
     else if (strncmp(opt,"buyerprice",l) == 0)
@@ -357,7 +357,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
             return false;
         }
 
-        //auctionbot.Command(AHB_CMD_BUYERPRICE, ahMapID, auctionbot.lookupColor(param1), param2);
+        auctionbot.Command(AHB_CMD_BUYERPRICE, ahMapID, param2, ItemQualities(auctionbot.lookupQuality(param1)));
         return true;
     }
     else if (strncmp(opt,"bidinterval",l) == 0)
@@ -377,7 +377,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
             return false;
         }
 
-        //auctionbot.Command(AHB_CMD_BIDINTERVAL, ahMapID, NULL, param1);
+        auctionbot.Command(AHB_CMD_BIDINTERVAL, ahMapID, param1);
         return true;
     }
     else if (strncmp(opt,"bidsperinterval",l) == 0)
@@ -397,7 +397,7 @@ bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
             return false;
         }
 
-        //auctionbot.Command(AHB_CMD_BIDSPERINTERVAL, ahMapID, NULL, param1);
+        auctionbot.Command(AHB_CMD_BIDSPERINTERVAL, ahMapID, param1);
         return true;
     }
     else

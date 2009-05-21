@@ -40,8 +40,21 @@ enum AHBotVectorIds
 
 enum AHBotData
 {
-    AHB_DATA_HEADER             = 2,        // Headers in 'data' DB consist of ID Field and SIZE Field
-    AHB_DATA_SIZE               = ((MAX_ITEM_QUALITY + AHB_DATA_HEADER) * AHB_MAX_VECTORS) // Max Data Size
+    AHB_DATA_HEADER             = 2,                                        // Number of headers per vector
+    AHB_DATA_UNIT               = (MAX_ITEM_QUALITY + AHB_DATA_HEADER),     // Vector size including headers
+    AHB_DATA_SIZE               = (AHB_DATA_UNIT * AHB_MAX_VECTORS)         // Maximum data size
+};
+
+enum AHBotDataIndex
+{
+    AHB_INDEX_PERCENTTG         = (AHB_VECTOR_ID_PERCENTTG * AHB_DATA_UNIT),
+    AHB_INDEX_PERCENTITEM       = (AHB_VECTOR_ID_PERCENTITEM * AHB_DATA_UNIT),
+    AHB_INDEX_MINPRICE          = (AHB_VECTOR_ID_MINPRICE * AHB_DATA_UNIT),
+    AHB_INDEX_MAXPRICE          = (AHB_VECTOR_ID_MAXPRICE * AHB_DATA_UNIT),
+    AHB_INDEX_MINBIDPRICE       = (AHB_VECTOR_ID_MINBIDPRICE * AHB_DATA_UNIT),
+    AHB_INDEX_MAXBIDPRICE       = (AHB_VECTOR_ID_MAXBIDPRICE * AHB_DATA_UNIT),
+    AHB_INDEX_MAXSTACK          = (AHB_VECTOR_ID_MAXSTACK * AHB_DATA_UNIT),
+    AHB_INDEX_BUYERPRICE        = (AHB_VECTOR_ID_BUYERPRICE * AHB_DATA_UNIT)
 };
 
 class AHBConfig
@@ -242,7 +255,11 @@ private:
 public:
     AuctionHouseBot();
     ~AuctionHouseBot();
-    void Command(AHBotCommands, uint32, ItemQualities, char*);
+
+    void Command(AHBotCommands, uint32);
+    void Command(AHBotCommands, uint32, char*);
+    void Command(AHBotCommands, uint32, char*, ItemQualities);
+
     uint32 GetAHBplayerGUID() { return AHBplayerGUID; };
     void Initialize();
     bool isValidMapID(uint32);
