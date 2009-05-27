@@ -63,6 +63,8 @@ void AuctionHouseBot::addNewAuctions(Player *AHBplayer, AHBConfig *config)
     uint32 countActualItems[MAX_ITEM_QUALITY];
     uint32 countActualTradeGoods[MAX_ITEM_QUALITY];
 
+    std::vector<uint32> validChoiceItems;
+    std::vector<uint32> validChoiceTradeGoods;
 
     for (int itemQuality = 0; itemQuality < MAX_ITEM_QUALITY; ++itemQuality)
     {
@@ -100,6 +102,23 @@ void AuctionHouseBot::addNewAuctions(Player *AHBplayer, AHBConfig *config)
         }
     }
 
+    // Populate valid choices for auctions based on item quality
+    for (int itemQuality = 0; itemQuality < MAX_ITEM_QUALITY; ++itemQuality)
+    {
+        if ((binTradeGoods[itemQuality].size() > 0) && (countActualTradeGoods[itemQuality] < countConfigTradeGoods[itemQuality]))
+            validChoiceTradeGoods.push_back(itemQuality);
+
+        if ((binItems[itemQuality].size() > 0) && (countActualItems[itemQuality] < countConfigItems[itemQuality]))
+            validChoiceItems.push_back(itemQuality);
+    }
+
+    // Test for valid choices, if no valid choices then exit
+    if (validChoiceItems.empty() && validChoiceTradeGoods.empty())
+    {
+        sLog.outString("AuctionHouseBot: addNewAuctions() - No valid choices");
+        return;
+    }
+
     // only insert a few at a time, so as not to peg the processor
     for (uint32 count = 1; count <= items; ++count)
     {
@@ -107,21 +126,29 @@ void AuctionHouseBot::addNewAuctions(Player *AHBplayer, AHBConfig *config)
 
         while (itemID == 0)
         {
-            ItemQualities itemQuality = ItemQualities(urand(0, MAX_ITEM_QUALITY - 1));
-            ItemClass itemClass = ItemClass(urand(6,7));
+            ItemClass itemClass;
+
+            if (validChoiceItems.empty())
+                itemClass = ITEM_CLASS_TRADE_GOODS;
+
+            if (validChoiceTradeGoods.empty())
+                itemClass = ITEM_CLASS_MISC;
+
+            if (!itemClass)
+                itemClass = ItemClass(urand(6,7));
 
             switch (itemClass)
             {
             case ITEM_CLASS_TRADE_GOODS:
-                if ((binTradeGoods[itemQuality].size() > 0) && (countActualTradeGoods[itemQuality] < countConfigTradeGoods[itemQuality]))
                 {
+                    ItemQualities itemQuality = ItemQualities(validChoiceTradeGoods[urand(0, validChoiceTradeGoods.size() - 1)]);
                     itemID = binTradeGoods[itemQuality][urand(0, binTradeGoods[itemQuality].size() - 1)];
                     ++countActualTradeGoods[itemQuality];
                 }
                 break;
             default:
-                if ((binItems[itemQuality].size() > 0) && (countActualItems[itemQuality] < countConfigItems[itemQuality]))
                 {
+                    ItemQualities itemQuality = ItemQualities(validChoiceItems[urand(0, validChoiceItems.size() - 1)]);
                     itemID = binItems[itemQuality][urand(0, binItems[itemQuality].size() - 1)];
                     ++countActualItems[itemQuality];
                 }

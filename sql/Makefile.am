@@ -29,6 +29,8 @@ pkgdata_DATA = \
 	mangos.sql \
 	realmd.sql \
 	characters.sql \
+	characters_auctionhousebot.sql \
+	characters_auctionhousebot_update.sql \
 	create_mysql.sql \
 	drop_mysql.sql
 
@@ -38,5 +40,7 @@ EXTRA_DIST = \
 	create_mysql.sql \
 	drop_mysql.sql \
 	characters.sql \
+	characters_auctionhousebot.sql \
+	characters_auctionhousebot_update.sql \
 	mangos.sql \
 	realmd.sql

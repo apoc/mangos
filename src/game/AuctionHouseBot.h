@@ -5,7 +5,7 @@
 #include "Config/ConfigEnv.h"
 #include "ace/Vector_T.h"
 
-#define AHB_REVISION "[AHBot-005]"
+#define AHB_REVISION "[AHBot-005-Alpha-003]"
 
 enum AHBotCommands
 {

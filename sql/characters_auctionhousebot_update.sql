@@ -1,44 +1,91 @@
-/*
-SQLyog Community Edition- MySQL GUI v6.03
-Host - 5.0.51b-community-nt : Database - characters
-*********************************************************************
-Server version : 5.0.51b-community-nt
-*/
+ET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
+SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
+SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL';
 
-/*!40101 SET NAMES utf8 */;
+-- Add new column to database
+ALTER TABLE `auctionhousebot` ADD COLUMN `data` LONGTEXT NULL DEFAULT NULL COMMENT 'Internal data structure'  AFTER `name` ;
 
-/*!40101 SET SQL_MODE=''*/;
+-- Modify existing column comments
+ALTER TABLE `auctionhousebot` MODIFY COLUMN `auctionhouse` INT(11) NOT NULL DEFAULT 0 COMMENT 'mapID of the auctionhouse',
+ MODIFY COLUMN `name` CHAR(25) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT 'Text name of the auctionhouse',
+ MODIFY COLUMN `minitems` INT(11) DEFAULT 0 COMMENT 'Minimum number of items you want to keep in the auction house',
+ MODIFY COLUMN `maxitems` INT(11) DEFAULT 0 COMMENT 'Maximum number of items you want to keep in the auction house',
+ MODIFY COLUMN `mintime` INT(11) DEFAULT 8 COMMENT 'Minimum number of hours for an auction',
+ MODIFY COLUMN `maxtime` INT(11) DEFAULT 24 COMMENT 'Maximum number of hours for an auction',
+ MODIFY COLUMN `buyerbiddinginterval` INT(11) DEFAULT 1 COMMENT 'Interval for how frequently the AHB bids on auctions, value is in minutes',
+ MODIFY COLUMN `buyerbidsperinterval` INT(11) DEFAULT 1 COMMENT 'Number of bids to put in per bidding interval';
 
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 
-/*Table structure for table `auctionhousebot` */
+-- Upgrade existing data into new data column
+UPDATE `auctionhousebot` SET `data` = CONCAT_WS(' ',
+ '0','8',percentgreytradegoods,percentwhitetradegoods,percentgreentradegoods,percentbluetradegoods,percentpurpletradegoods,percentorangetradegoods,percentyellowtradegoods,'0',
+ '1','8',percentgreyitems,percentwhiteitems,percentgreenitems,percentblueitems,percentpurpleitems,percentorangeitems,percentyellowitems,'0',
+ '2','8',minpricegrey,minpricewhite,minpricegreen,minpriceblue,minpricepurple,minpriceorange,minpriceyellow,'0',
+ '3','8',maxpricegrey,maxpricewhite,maxpricegreen,maxpriceblue,maxpricepurple,maxpriceorange,maxpriceyellow,'0',
+ '4','8',minbidpricegrey,minbidpricewhite,minbidpricegreen,minbidpriceblue,minbidpricepurple,minbidpriceorange,minbidpriceyellow,'0',
+ '5','8',maxbidpricegrey,maxbidpricewhite,maxbidpricegreen,maxbidpriceblue,maxbidpricepurple,maxbidpriceorange,maxbidpriceyellow,'0',
+ '6','8',maxstackgrey,maxstackwhite,maxstackgreen,maxstackblue,maxstackpurple,maxstackorange,maxstackyellow,'0',
+ '7','8',buyerpricegrey,buyerpricewhite,buyerpricegreen,buyerpriceblue,buyerpricepurple,buyerpriceorange,buyerpriceyellow,'0 ');
 
-ALTER TABLE `auctionhousebot`
-  ADD COLUMN `percentgreytradegoods` int(11) default '0' COMMENT 'Sets the percentage of the Grey Trade Goods auction items' AFTER `maxtime`,
-  ADD COLUMN `percentorangetradegoods` int(11) default '0' COMMENT 'Sets the percentage of the Orange Trade Goods auction items' AFTER `percentpurpletradegoods`,
-  ADD COLUMN `percentyellowtradegoods` int(11) default '0' COMMENT 'Sets the percentage of the Yellow Trade Goods auction items' AFTER `percentorangetradegoods`,
-  ADD COLUMN `percentgreyitems` int(11) default '0' COMMENT 'Sets the percentage of the non trade Grey auction items' AFTER `percentyellowtradegoods`,
-  ADD COLUMN `percentorangeitems` int(11) default '0' COMMENT 'Sets the percentage of the non trade Orange auction items' AFTER `percentpurpleitems`,
-  ADD COLUMN `percentyellowitems` int(11) default '0' COMMENT 'Sets the percentage of the non trade Yellow auction items' AFTER `percentorangeitems`,
-  ADD COLUMN `minpricegrey` int(11) default '100' COMMENT 'Minimum price of Grey items (percentage).' AFTER `percentyellowitems`,
-  ADD COLUMN `maxpricegrey` int(11) default '150' COMMENT 'Maximum price of Grey items (percentage).' AFTER `minpricegrey`,
-  ADD COLUMN `minpriceorange` int(11) default '3250' COMMENT 'Minimum price of Orange items (percentage).' AFTER `maxpricepurple`,
-  ADD COLUMN `maxpriceorange` int(11) default '5550' COMMENT 'Maximum price of Orange items (percentage).' AFTER `minpriceorange`,
-  ADD COLUMN `minpriceyellow` int(11) default '5250' COMMENT 'Minimum price of Yellow items (percentage).' AFTER `maxpriceorange`,
-  ADD COLUMN `maxpriceyellow` int(11) default '6550' COMMENT 'Maximum price of Yellow items (percentage).' AFTER `minpriceyellow`,
-  ADD COLUMN `minbidpricegrey` int(11) default '70' COMMENT 'Starting bid price of Grey items as a percentage of the randomly chosen buyout price. Default: 70' AFTER `maxpriceyellow`,
-  ADD COLUMN `maxbidpricegrey` int(11) default '100' COMMENT 'Starting bid price of Grey items as a percentage of the randomly chosen buyout price. Default: 100' AFTER `minbidpricegrey`,
-  ADD COLUMN `minbidpriceorange` int(11) default '80' COMMENT 'Starting bid price of Orange items as a percentage of the randomly chosen buyout price. Default: 80' AFTER `maxbidpricepurple`,
-  ADD COLUMN `maxbidpriceorange` int(11) default '100' COMMENT 'Starting bid price of Orange items as a percentage of the randomly chosen buyout price. Default: 100' AFTER `minbidpriceorange`,
-  ADD COLUMN `minbidpriceyellow` int(11) default '80' COMMENT 'Starting bid price of Yellow items as a percentage of the randomly chosen buyout price. Default: 80' AFTER `maxbidpriceorange`,
-  ADD COLUMN `maxbidpriceyellow` int(11) default '100' COMMENT 'Starting bid price of Yellow items as a percentage of the randomly chosen buyout price. Default: 100' AFTER `minbidpriceyellow`,
-  ADD COLUMN `maxstackgrey` int(11) default '0' COMMENT 'Stack size limits for item qualities - a value of 0 will disable a maximum stack size for that quality, which will allow the bot to create items in stack as large as the item allows.' AFTER `maxbidpriceyellow`,
-  ADD COLUMN `maxstackorange` int(11) default '1' COMMENT 'Stack size limits for item qualities - a value of 0 will disable a maximum stack size for that quality, which will allow the bot to create items in stack as large as the item allows.' AFTER `maxstackpurple`,
-  ADD COLUMN `maxstackyellow` int(11) default '1' COMMENT 'Stack size limits for item qualities - a value of 0 will disable a maximum stack size for that quality, which will allow the bot to create items in stack as large as the item allows.' AFTER `maxstackorange`,
-  ADD COLUMN `buyerpriceorange` int(11) default '20' COMMENT 'Multiplier to vendorprice when buying orange items from auctionhouse' AFTER `buyerpricepurple`,
-  ADD COLUMN `buyerpriceyellow` int(11) default '22' COMMENT 'Multiplier to vendorprice when buying yellow items from auctionhouse' AFTER `buyerpriceorange`;
+-- Remove old unused columns from database
+ALTER TABLE `auctionhousebot` DROP COLUMN `buyerpriceblue` ,
+ DROP COLUMN `buyerpricegreen` ,
+ DROP COLUMN `buyerpricegrey` ,
+ DROP COLUMN `buyerpriceorange` ,
+ DROP COLUMN `buyerpricepurple` ,
+ DROP COLUMN `buyerpricewhite` ,
+ DROP COLUMN `buyerpriceyellow` ,
+ DROP COLUMN `maxbidpriceblue` ,
+ DROP COLUMN `maxbidpricegreen` ,
+ DROP COLUMN `maxbidpricegrey` ,
+ DROP COLUMN `maxbidpriceorange` ,
+ DROP COLUMN `maxbidpricepurple` ,
+ DROP COLUMN `maxbidpricewhite` ,
+ DROP COLUMN `maxbidpriceyellow` ,
+ DROP COLUMN `maxpriceblue` ,
+ DROP COLUMN `maxpricegreen` ,
+ DROP COLUMN `maxpricegrey` ,
+ DROP COLUMN `maxpriceorange` ,
+ DROP COLUMN `maxpricepurple` ,
+ DROP COLUMN `maxpricewhite` ,
+ DROP COLUMN `maxpriceyellow` ,
+ DROP COLUMN `maxstackblue` ,
+ DROP COLUMN `maxstackgreen` ,
+ DROP COLUMN `maxstackgrey` ,
+ DROP COLUMN `maxstackorange` ,
+ DROP COLUMN `maxstackpurple` ,
+ DROP COLUMN `maxstackwhite` ,
+ DROP COLUMN `maxstackyellow` ,
+ DROP COLUMN `minbidpriceblue` ,
+ DROP COLUMN `minbidpricegreen` ,
+ DROP COLUMN `minbidpricegrey` ,
+ DROP COLUMN `minbidpriceorange` ,
+ DROP COLUMN `minbidpricepurple` ,
+ DROP COLUMN `minbidpricewhite` ,
+ DROP COLUMN `minbidpriceyellow` ,
+ DROP COLUMN `minpriceblue` ,
+ DROP COLUMN `minpricegreen` ,
+ DROP COLUMN `minpricegrey` ,
+ DROP COLUMN `minpriceorange` ,
+ DROP COLUMN `minpricepurple` ,
+ DROP COLUMN `minpricewhite` ,
+ DROP COLUMN `minpriceyellow` ,
+ DROP COLUMN `percentblueitems` ,
+ DROP COLUMN `percentbluetradegoods` ,
+ DROP COLUMN `percentgreenitems` ,
+ DROP COLUMN `percentgreentradegoods` ,
+ DROP COLUMN `percentgreyitems` ,
+ DROP COLUMN `percentgreytradegoods` ,
+ DROP COLUMN `percentorangeitems` ,
+ DROP COLUMN `percentorangetradegoods` ,
+ DROP COLUMN `percentpurpleitems` ,
+ DROP COLUMN `percentpurpletradegoods` ,
+ DROP COLUMN `percentwhiteitems` ,
+ DROP COLUMN `percentwhitetradegoods` ,
+ DROP COLUMN `percentyellowitems` ,
+ DROP COLUMN `percentyellowtradegoods` ;
 
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+SET SQL_MODE=@OLD_SQL_MODE;
+SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
+SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 
