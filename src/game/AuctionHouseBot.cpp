@@ -35,7 +35,7 @@ AuctionHouseBot::~AuctionHouseBot()
 
 void AuctionHouseBot::addNewAuctions(Player *AHBplayer, AHBConfig *config)
 {
-    if (!AHBSeller)
+    if (!AHBSeller) // If the seller is disabled, lets exit this subroutine
         return;
 
     AuctionHouseEntry const* ahEntry = auctionmgr.GetAuctionHouseEntry(config->GetAHFID());
@@ -57,21 +57,19 @@ void AuctionHouseBot::addNewAuctions(Player *AHBplayer, AHBConfig *config)
             items = (maxItems - auctions);
     }
 
-    uint32 countConfigItems[MAX_ITEM_QUALITY];
-    uint32 countConfigTradeGoods[MAX_ITEM_QUALITY];
+    uint32 countConfigItems[MAX_ITEM_CLASS][MAX_ITEM_QUALITY];
+    uint32 countActualItems[MAX_ITEM_CLASS][MAX_ITEM_QUALITY];
 
-    uint32 countActualItems[MAX_ITEM_QUALITY];
-    uint32 countActualTradeGoods[MAX_ITEM_QUALITY];
+    std::vector<std::vector<uint8>> validChoiceItems;
+    std::vector<uint8> validChoiceClasses;
 
-    std::vector<uint32> validChoiceItems;
-    std::vector<uint32> validChoiceTradeGoods;
-
-    for (int itemQuality = 0; itemQuality < MAX_ITEM_QUALITY; ++itemQuality)
+    for (uint8 itemClass = 0; itemClass < MAX_ITEM_CLASS; ++itemClass)
     {
-        countConfigItems[itemQuality] = config->GetItemCount(ItemQualities(itemQuality), ITEM_CLASS_TRADE_GOODS);
-        countConfigTradeGoods[itemQuality] = config->GetItemCount(ItemQualities(itemQuality), ITEM_CLASS_MISC);
-        countActualItems[itemQuality] = 0;
-        countActualTradeGoods[itemQuality] = 0;
+        for (uint8 itemQuality = 0; itemQuality < MAX_ITEM_QUALITY; ++itemQuality)
+        {
+            countConfigItems[itemClass][itemQuality] = config->GetItemCount(ItemClass(itemClass), ItemQualities(itemQuality));
+            countActualItems[itemClass][itemQuality] = 0;
+        }
     }
 
     for (AuctionHouseObject::AuctionEntryMap::const_iterator itr = auctionHouse->GetAuctionsBegin();itr != auctionHouse->GetAuctionsEnd();++itr)
@@ -91,70 +89,53 @@ void AuctionHouseBot::addNewAuctions(Player *AHBplayer, AHBConfig *config)
             continue;
         }
 
-        switch (itemPrototype->Class)
-        {
-        case ITEM_CLASS_TRADE_GOODS:
-            ++countActualTradeGoods[itemPrototype->Quality];
-            break;
-        default:
-            ++countActualItems[itemPrototype->Quality];
-            break;
-        }
-    }
-
-    // Populate valid choices for auctions based on item quality
-    for (int itemQuality = 0; itemQuality < MAX_ITEM_QUALITY; ++itemQuality)
-    {
-        if ((binTradeGoods[itemQuality].size() > 0) && (countActualTradeGoods[itemQuality] < countConfigTradeGoods[itemQuality]))
-            validChoiceTradeGoods.push_back(itemQuality);
-
-        if ((binItems[itemQuality].size() > 0) && (countActualItems[itemQuality] < countConfigItems[itemQuality]))
-            validChoiceItems.push_back(itemQuality);
-    }
-
-    // Test for valid choices, if no valid choices then exit
-    if (validChoiceItems.empty() && validChoiceTradeGoods.empty())
-    {
-        sLog.outString("AuctionHouseBot: addNewAuctions() - No valid choices");
-        return;
+        ++countActualItems[itemPrototype->Class][itemPrototype->Quality];
     }
 
     // only insert a few at a time, so as not to peg the processor
     for (uint32 count = 1; count <= items; ++count)
     {
-        uint32 itemID = 0;
+        uint32 itemID = 0;      // Used to hold the itemID for the auction
+        int vectorIndex = -1;   // Used to hold the index value of vectors
 
-        while (itemID == 0)
+        // Empty out the choices at beginning of loop
+        validChoiceItems.clear();
+        validChoiceClasses.clear();
+
+        // Populate valid choices for auctions based on item quality
+        for (uint8 itemClass = 0; itemClass < MAX_ITEM_CLASS; ++itemClass)
         {
-            ItemClass itemClass;
-
-            if (validChoiceItems.empty())
-                itemClass = ITEM_CLASS_TRADE_GOODS;
-
-            if (validChoiceTradeGoods.empty())
-                itemClass = ITEM_CLASS_MISC;
-
-            if (!itemClass)
-                itemClass = ItemClass(urand(6,7));
-
-            switch (itemClass)
+            bool bPushedClass = false;      // Used to detect if this itemClass has already been pushed into the vector
+            for (uint8 itemQuality = 0; itemQuality < MAX_ITEM_QUALITY; ++itemQuality)
             {
-            case ITEM_CLASS_TRADE_GOODS:
+                if ((binItems[itemClass][itemQuality].size() > 0) && (countActualItems[itemClass][itemQuality] < countConfigItems[itemClass][itemQuality]))
                 {
-                    ItemQualities itemQuality = ItemQualities(validChoiceTradeGoods[urand(0, validChoiceTradeGoods.size() - 1)]);
-                    itemID = binTradeGoods[itemQuality][urand(0, binTradeGoods[itemQuality].size() - 1)];
-                    ++countActualTradeGoods[itemQuality];
+                    if (!bPushedClass)
+                    {
+                        validChoiceItems.resize(validChoiceItems.size()+1); // Expand the vector by one
+                        validChoiceClasses.push_back(itemClass);            // Add the itemClass valid choice
+                        bPushedClass = true;                                // We added a new vector choice value so it becomes true
+                        ++vectorIndex;                                      // Increment the index by 1
+                    }
+                    validChoiceItems[vectorIndex].push_back(itemQuality);   // Add the itemQuality valid choice
                 }
-                break;
-            default:
-                {
-                    ItemQualities itemQuality = ItemQualities(validChoiceItems[urand(0, validChoiceItems.size() - 1)]);
-                    itemID = binItems[itemQuality][urand(0, binItems[itemQuality].size() - 1)];
-                    ++countActualItems[itemQuality];
-                }
-                break;
             }
         }
+
+        // Check to see if theres any valid choices to choose from.
+        if (validChoiceClasses.empty())
+        {
+            if(debugOut)
+                sLog.outDebug("AuctionHouseBot: addNewAuctions() - No valid choices");
+            return;
+        }
+
+        // Since there must be a valid choice, lets add an item
+        vectorIndex = urand(0, validChoiceClasses.size() - 1);
+        ItemClass itemClass = ItemClass(validChoiceClasses[vectorIndex]);
+        ItemQualities itemQuality = ItemQualities(validChoiceItems[vectorIndex][urand(0, validChoiceItems[vectorIndex].size() - 1)]);
+        itemID = binItems[itemClass][itemQuality][urand(0, binItems[itemClass][itemQuality].size() - 1)];
+        ++countActualItems[itemClass][itemQuality];
 
         ItemPrototype const* itemPrototype = objmgr.GetItemPrototype(itemID);
         if (itemPrototype == NULL)
@@ -189,25 +170,12 @@ void AuctionHouseBot::addNewAuctions(Player *AHBplayer, AHBConfig *config)
             break;
         }
 
-        switch (ItemClass(itemPrototype->Class))
-        {
-        case ITEM_CLASS_TRADE_GOODS:
-            if (config->GetMaxStack(ItemQualities(itemPrototype->Quality)) != 0)
-                stackCount = urand(1, minValue(item->GetMaxStackCount(), config->GetMaxStack(ItemQualities(itemPrototype->Quality))));
-            buyoutPrice *= urand(config->GetMinPrice(ItemQualities(itemPrototype->Quality)), config->GetMaxPrice(ItemQualities(itemPrototype->Quality))) * stackCount;
-            buyoutPrice /= 100;
-            bidPrice = buyoutPrice * urand(config->GetMinBidPrice(ItemQualities(itemPrototype->Quality)), config->GetMaxBidPrice(ItemQualities(itemPrototype->Quality)));
-            bidPrice /= 100;
-            break;
-        default:
-            if (config->GetMaxStack(ItemQualities(itemPrototype->Quality)) != 0)
-                stackCount = urand(1, minValue(item->GetMaxStackCount(), config->GetMaxStack(ItemQualities(itemPrototype->Quality))));
-            buyoutPrice *= urand(config->GetMinPrice(ItemQualities(itemPrototype->Quality)), config->GetMaxPrice(ItemQualities(itemPrototype->Quality))) * stackCount;
-            buyoutPrice /= 100;
-            bidPrice = buyoutPrice * urand(config->GetMinBidPrice(ItemQualities(itemPrototype->Quality)), config->GetMaxBidPrice(ItemQualities(itemPrototype->Quality)));
-            bidPrice /= 100;
-            break;
-        }
+        if (config->GetMaxStack(ItemClass(itemPrototype->Class), ItemQualities(itemPrototype->Quality)) != 0)
+            stackCount = urand(1, minValue(item->GetMaxStackCount(), urand(config->GetMinStack(ItemClass(itemPrototype->Class), ItemQualities(itemPrototype->Quality)), config->GetMaxStack(ItemClass(itemPrototype->Class), ItemQualities(itemPrototype->Quality)))));
+        buyoutPrice *= urand(config->GetMinPrice(ItemClass(itemPrototype->Class), ItemQualities(itemPrototype->Quality)), config->GetMaxPrice(ItemClass(itemPrototype->Class), ItemQualities(itemPrototype->Quality))) * stackCount;
+        buyoutPrice /= 100;
+        bidPrice = buyoutPrice * urand(config->GetMinBidPrice(ItemClass(itemPrototype->Class), ItemQualities(itemPrototype->Quality)), config->GetMaxBidPrice(ItemClass(itemPrototype->Class), ItemQualities(itemPrototype->Quality)));
+        bidPrice /= 100;
 
         item->SetCount(stackCount);
 
@@ -276,7 +244,8 @@ void AuctionHouseBot::addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *con
         AuctionEntry* auctionEntry = auctionHouseObject->GetAuction(auctionID);
         if (!auctionEntry)
         {
-            sLog.outError("AuctionHouseBot: addNewAuctionBuyerBotBid() - (!auctionEntry) Item doesn't exists, perhaps bought already?");
+            if (debugOut)
+                sLog.outDebug("AuctionHouseBot: addNewAuctionBuyerBotBid() - (!auctionEntry) Item doesn't exists, perhaps bought already?");
             continue;
         }
 
@@ -284,7 +253,8 @@ void AuctionHouseBot::addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *con
         Item *item = auctionmgr.GetAItem(auctionEntry->item_guidlow);
         if (!item)
         {
-            sLog.outError("AuctionHouseBot: addNewAuctionBuyerBotBid() - (!item) Item doesn't exists, perhaps bought already?");
+            if (debugOut)
+                sLog.outDebug("AuctionHouseBot: addNewAuctionBuyerBotBid() - (!item) Item doesn't exists, perhaps bought already?");
             continue;
         }
 
@@ -326,19 +296,17 @@ void AuctionHouseBot::addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *con
         switch (BuyMethod)
         {
         case 0:
-            if (currentAuctionPrice < itemPrototype->SellPrice * item->GetCount() * config->GetBuyerPrice(ItemQualities(itemPrototype->Quality)))
-                bidMax = itemPrototype->SellPrice * item->GetCount() * config->GetBuyerPrice(ItemQualities(itemPrototype->Quality));
+            if (currentAuctionPrice < itemPrototype->SellPrice * item->GetCount() * config->GetBuyerPrice(ItemClass(itemPrototype->Class), ItemQualities(itemPrototype->Quality)))
+                bidMax = itemPrototype->SellPrice * item->GetCount() * config->GetBuyerPrice(ItemClass(itemPrototype->Class), ItemQualities(itemPrototype->Quality));
             break;
         case 1:
-            if (currentAuctionPrice < itemPrototype->BuyPrice * item->GetCount() * config->GetBuyerPrice(ItemQualities(itemPrototype->Quality)))
-                bidMax = itemPrototype->BuyPrice * item->GetCount() * config->GetBuyerPrice(ItemQualities(itemPrototype->Quality));
+            if (currentAuctionPrice < itemPrototype->BuyPrice * item->GetCount() * config->GetBuyerPrice(ItemClass(itemPrototype->Class), ItemQualities(itemPrototype->Quality)))
+                bidMax = itemPrototype->BuyPrice * item->GetCount() * config->GetBuyerPrice(ItemClass(itemPrototype->Class), ItemQualities(itemPrototype->Quality));
             break;
         }
 
         if (debugOut)
-        {
             sLog.outDebug("AuctionHouseBot: addNewAuctionBuyerBotBid() - bidMax: %f", bidMax);
-        }
 
         // check some special items, and do recalculating to their prices
         switch (ItemClass(itemPrototype->Class))
@@ -361,21 +329,17 @@ void AuctionHouseBot::addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *con
         // Calculate our bid
         uint32 bidprice = uint32(currentAuctionPrice + ((bidMax - currentAuctionPrice) * float(urand(0,100) / 100)));
         if (debugOut)
-        {
             sLog.outDebug("AuctionHouseBot: addNewAuctionBuyerBotBid() - bidprice: %u", bidprice);
-        }
 
         // Check our bid is high enough to be valid. If not, correct it to minimum.
         if ((currentAuctionPrice + auctionEntry->GetAuctionOutBid()) > bidprice)
         {
             bidprice = currentAuctionPrice + auctionEntry->GetAuctionOutBid();
             if (debugOut)
-            {
                 sLog.outDebug("AuctionHouseBot: addNewAuctionBuyerBotBid() - bidprice(>): %u", bidprice);
-            }
         }
 
-        // Check wether we do normal bid, or buyout
+        // Check for normal bid versus buyout
         if ((bidprice < auctionEntry->buyout) || (auctionEntry->buyout == 0))
         {
             // Send mail to last bidder and return money
@@ -390,7 +354,7 @@ void AuctionHouseBot::addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *con
         }
         else
         {
-            //buyout
+            // Do buyout
             if (AHBplayer->GetGUIDLow() != auctionEntry->bidder)
                 session->SendAuctionOutbiddedMail(auctionEntry, auctionEntry->buyout);
 
@@ -531,7 +495,7 @@ void AuctionHouseBot::Command(AHBotCommands command, uint32 ahMapID, char* args)
     }
 }
 
-void AuctionHouseBot::Command(AHBotCommands command, uint32 ahMapID, char* args, ItemQualities itemQuality)
+void AuctionHouseBot::Command(AHBotCommands command, uint32 ahMapID, char* args, ItemClass itemClass, ItemQualities itemQuality)
 {
     AHBConfig *config;
 
@@ -560,10 +524,7 @@ void AuctionHouseBot::Command(AHBotCommands command, uint32 ahMapID, char* args,
 
             for (Tokens::const_iterator iter = data.begin(); iter != data.end(); ++iter, ++index)
             {
-                if (float(index / MAX_ITEM_QUALITY) < 1.0f)
-                    SetUInt32ValueInDB((AHB_INDEX_PERCENTTG + AHB_DATA_HEADER + index), uint32(atoi(iter->c_str())), config);
-                else
-                    SetUInt32ValueInDB((AHB_INDEX_PERCENTITEM + AHB_DATA_HEADER + (index - MAX_ITEM_QUALITY)), uint32(atoi(iter->c_str())), config);
+                SetUInt32ValueInDB((AHB_INDEX_PERCENTITEMS + AHB_DATA_HEADER + index), uint32(atoi(iter->c_str())), config);
             }
         }
         break;
@@ -571,48 +532,48 @@ void AuctionHouseBot::Command(AHBotCommands command, uint32 ahMapID, char* args,
         {
             char * param1 = strtok(args, " ");
             uint32 minPrice = (uint32) strtoul(param1, NULL, 0);
-            SetUInt32ValueInDB((AHB_INDEX_MINPRICE + AHB_DATA_HEADER + itemQuality), minPrice, config);
-            config->SetMinPrice(itemQuality, minPrice);
+            SetUInt32ValueInDB((AHB_INDEX_MINPRICE + AHB_DATA_HEADER + (AHB_DATA_COLUMNS * itemClass) + itemQuality), minPrice, config);
+            config->SetMinPrice(itemClass, itemQuality, minPrice);
         }
         break;
     case AHB_CMD_MAXPRICE:
         {
             char * param1 = strtok(args, " ");
             uint32 maxPrice = (uint32) strtoul(param1, NULL, 0);
-            SetUInt32ValueInDB((AHB_INDEX_MAXPRICE + AHB_DATA_HEADER + itemQuality), maxPrice, config);
-            config->SetMaxPrice(itemQuality, maxPrice);
+            SetUInt32ValueInDB((AHB_INDEX_MAXPRICE + AHB_DATA_HEADER + (AHB_DATA_COLUMNS * itemClass) + itemQuality), maxPrice, config);
+            config->SetMaxPrice(itemClass, itemQuality, maxPrice);
         }
         break;
     case AHB_CMD_MINBIDPRICE:
         {
             char * param1 = strtok(args, " ");
             uint32 minBidPrice = (uint32) strtoul(param1, NULL, 0);
-            SetUInt32ValueInDB((AHB_INDEX_MINBIDPRICE + AHB_DATA_HEADER + itemQuality), minBidPrice, config);
-            config->SetMinBidPrice(itemQuality, minBidPrice);
+            SetUInt32ValueInDB((AHB_INDEX_MINBIDPRICE + AHB_DATA_HEADER + (AHB_DATA_COLUMNS * itemClass) + itemQuality), minBidPrice, config);
+            config->SetMinBidPrice(itemClass, itemQuality, minBidPrice);
         }
         break;
     case AHB_CMD_MAXBIDPRICE:
         {
             char * param1 = strtok(args, " ");
             uint32 maxBidPrice = (uint32) strtoul(param1, NULL, 0);
-            SetUInt32ValueInDB((AHB_INDEX_MAXBIDPRICE + AHB_DATA_HEADER + itemQuality), maxBidPrice, config);
-            config->SetMaxBidPrice(itemQuality, maxBidPrice);
+            SetUInt32ValueInDB((AHB_INDEX_MAXBIDPRICE + AHB_DATA_HEADER + (AHB_DATA_COLUMNS * itemClass) + itemQuality), maxBidPrice, config);
+            config->SetMaxBidPrice(itemClass, itemQuality, maxBidPrice);
         }
         break;
     case AHB_CMD_MAXSTACK:
         {
             char * param1 = strtok(args, " ");
             uint32 maxStack = (uint32) strtoul(param1, NULL, 0);
-            SetUInt32ValueInDB((AHB_INDEX_MAXSTACK + AHB_DATA_HEADER + itemQuality), maxStack, config);
-            config->SetMaxStack(itemQuality, maxStack);
+            SetUInt32ValueInDB((AHB_INDEX_MAXSTACK + AHB_DATA_HEADER + (AHB_DATA_COLUMNS * itemClass) + itemQuality), maxStack, config);
+            config->SetMaxStack(itemClass, itemQuality, maxStack);
         }
         break;
     case AHB_CMD_BUYERPRICE:
         {
             char * param1 = strtok(args, " ");
             uint32 buyerPrice = (uint32) strtoul(param1, NULL, 0);
-            SetUInt32ValueInDB((AHB_INDEX_BUYERPRICE + AHB_DATA_HEADER + itemQuality), buyerPrice, config);
-            config->SetBuyerPrice(itemQuality, buyerPrice);
+            SetUInt32ValueInDB((AHB_INDEX_BUYERPRICE + AHB_DATA_HEADER + (AHB_DATA_COLUMNS * itemClass) + itemQuality), buyerPrice, config);
+            config->SetBuyerPrice(itemClass, itemQuality, buyerPrice);
         }
         break;
     default:
@@ -715,26 +676,30 @@ void AuctionHouseBot::Initialize()
 
             switch (prototype->Bonding)
             {
-            case 0:
+            case NO_BIND:
                 if (!No_Bind)
                     continue;
                 break;
-            case 1:
+            case BIND_WHEN_PICKED_UP:
                 if (!Bind_When_Picked_Up)
                     continue;
                 break;
-            case 2:
+            case BIND_WHEN_EQUIPED:
                 if (!Bind_When_Equipped)
                     continue;
                 break;
-            case 3:
+            case BIND_WHEN_USE:
                 if (!Bind_When_Use)
                     continue;
                 break;
-            case 4:
+            case BIND_QUEST_ITEM:
                 if (!Bind_Quest_Item)
                     continue;
                 break;
+            case BIND_QUEST_ITEM1:
+                if (debugOut)
+                    sLog.outDebug("AuctionHouseBot: Initialize() - switch(prototype->Bonding) BIND_QUEST_ITEM1 detected, ignoring item");
+                continue;
             default:
                 sLog.outError("AuctionHouseBot: Initialize() - switch(prototype->Bonding) default reached");
                 continue;
@@ -758,47 +723,28 @@ void AuctionHouseBot::Initialize()
                 continue;
             }
 
-            if (Vendor_Items == 0)
-                for (uint32 i = 0; i < npcItems.size(); ++i)
-                    if (itemID == npcItems[i])
-                        continue;
+            bool isVendorItem = false;
+            bool isLootItem = false;
 
-            if (Loot_Items == 0)
-                for (uint32 i = 0; i < lootItems.size(); ++i)
-                    if (itemID == lootItems[i])
-                        continue;
+            for (uint32 i = 0; i < npcItems.size(); ++i)
+                if (itemID == npcItems[i])
+                    isVendorItem = true;
 
-            // Check this section, not sure if it does anything...
-            if (Other_Items == 0)
-            {
-                bool isVendorItem = false;
-                bool isLootItem = false;
+            for (uint32 i = 0; i < lootItems.size(); ++i)
+                if (itemID == lootItems[i])
+                    isLootItem = true;
 
-                for (uint32 i = 0; (i < npcItems.size()) && (!isVendorItem); ++i)
-                {
-                    if (itemID == npcItems[i])
-                        isVendorItem = true;
-                }
-                for (uint32 i = 0; (i < lootItems.size()) && (!isLootItem); ++i)
-                {
-                    if (itemID == lootItems[i])
-                        isLootItem = true;
-                }
-                if ((!isLootItem) && (!isVendorItem))
-                    continue;
-            }
+            if (Vendor_Items == 0 && isVendorItem)
+                continue;
 
-            switch (prototype->Class)
-            {
-            case ITEM_CLASS_TRADE_GOODS:
-                binTradeGoods[prototype->Quality].push_back(itemID);
-                ++binSize;
-                break;
-            default:
-                binItems[prototype->Quality].push_back(itemID);
-                ++binSize;
-                break;
-            }
+            if (Loot_Items == 0 && isLootItem)
+                continue;
+
+            if (Other_Items == 0 && !isLootItem && !isVendorItem)
+                continue;
+
+            binItems[prototype->Class][prototype->Quality].push_back(itemID);
+            ++binSize;
         }
 
         if (!binSize)
@@ -808,11 +754,16 @@ void AuctionHouseBot::Initialize()
         }
 
         sLog.outString("AuctionHouseBot:");
-        for (int itemQuality = 0; itemQuality < MAX_ITEM_QUALITY; ++itemQuality)
+        for (uint8 itemClass = 0; itemClass < MAX_ITEM_CLASS; ++ itemClass)
         {
-            sLog.outString("Item Quality: %s", lookupQuality(ItemQualities(itemQuality)));
-            sLog.outString("  |--> loaded %d trade goods", binTradeGoods[itemQuality].size());
-            sLog.outString("  \\--> loaded %d items", binItems[itemQuality].size());
+            sLog.outString("Item Class: %s", lookupClass(ItemClass(itemClass)));
+            for (uint8 itemQuality = 0; itemQuality < MAX_ITEM_QUALITY; ++itemQuality)
+            {
+                if (itemQuality == MAX_ITEM_QUALITY - 1)
+                    sLog.outString("  \\--> loaded %d %s item(s)", binItems[itemClass][itemQuality].size(), lookupQuality(ItemQualities(itemQuality)));
+                else
+                    sLog.outString("  |--> loaded %d %s item(s)", binItems[itemClass][itemQuality].size(), lookupQuality(ItemQualities(itemQuality)));
+            }
         }
     }
     sLog.outString("AuctionHouseBot "AHB_REVISION" is now loaded");
@@ -924,73 +875,98 @@ bool AuctionHouseBot::LoadValues(AHBConfig *config)
     // Load data into vectors
     for (Tokens::const_iterator iter = data.begin(); iter != data.end();)
     {
-        AHBotVectorIds vectorId = AHBotVectorIds(atoi(iter++->c_str()));   // First value is always ID Field
-        int vectorSize = atoi(iter++->c_str());                            // Second value is always SIZE Field
+        AHBotVectorIds vectorId = AHBotVectorIds(atoi(iter++->c_str()));    // First value is always ID field
+        int vectorColumn = atoi(iter++->c_str());                           // Second value is always COLUMN size field
+        int vectorRow = atoi(iter++->c_str());                              // Third value is always ROW size field
 
         switch(vectorId)
         {
-        case AHB_VECTOR_ID_PERCENTTG:
-            for(int itemQuality = 0; itemQuality < vectorSize; ++itemQuality, ++iter)
+        case AHB_VECTOR_ID_PERCENTITEMS:
+            for(uint8 itemClass = 0; itemClass < vectorColumn; ++itemClass, ++iter)
             {
-                config->SetPercentage(ItemQualities(itemQuality), ITEM_CLASS_TRADE_GOODS, uint32(atoi(iter->c_str())));
-                if (debugOut)
-                    sLog.outDebug("AuctionHouseBot: LoadValues() - percentTradeGoods[%u] = %u", itemQuality, config->GetPercentage(ItemQualities(itemQuality), ITEM_CLASS_TRADE_GOODS));
+                for(int itemQuality = 0; itemQuality < vectorRow; ++itemQuality, ++iter)
+                {
+                    config->SetPercentage(ItemClass(itemClass), ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
+                    if (debugOut)
+                        sLog.outDebug("AuctionHouseBot: LoadValues() - percentTradeGoods[%u][%u] = %u", itemClass, itemQuality, config->GetPercentage(ItemClass(itemClass), ItemQualities(itemQuality)));
+                }
             }
             break;
-        case AHB_VECTOR_ID_PERCENTITEM:
-            for(int itemQuality = 0; itemQuality < vectorSize; ++itemQuality, ++iter)
+        case AHV_VECTOR_ID_COUNTITEMS:
+           for(uint8 itemClass = 0; itemClass < vectorColumn; ++itemClass, ++iter)
             {
-                config->SetPercentage(ItemQualities(itemQuality), ITEM_CLASS_MISC, uint32(atoi(iter->c_str())));
-                if (debugOut)
-                    sLog.outDebug("AuctionHouseBot: LoadValues() - percentItems[%u]      = %u", itemQuality, config->GetPercentage(ItemQualities(itemQuality), ITEM_CLASS_MISC));
+                for(int itemQuality = 0; itemQuality < vectorRow; ++itemQuality, ++iter)
+                {
+                    config->SetCounts(ItemClass(itemClass), ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
+                    if (debugOut)
+                        sLog.outDebug("AuctionHouseBot: LoadValues() - percentTradeGoods[%u][%u] = %u", itemClass, itemQuality, config->GetCounts(ItemClass(itemClass), ItemQualities(itemQuality)));
+                }
             }
             break;
         case AHB_VECTOR_ID_MINPRICE:
-            for(int itemQuality = 0; itemQuality < vectorSize; ++itemQuality, ++iter)
+            for(uint8 itemClass = 0; itemClass < vectorColumn; ++itemClass, ++iter)
             {
-                config->SetMinPrice(ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
-                if (debugOut)
-                    sLog.outDebug("AuctionHouseBot: LoadValues() - minPrice[%u]          = %u", itemQuality, config->GetMinPrice(ItemQualities(itemQuality)));
+                for(int itemQuality = 0; itemQuality < vectorRow; ++itemQuality, ++iter)
+                {
+                    config->SetMinPrice(ItemClass(itemClass), ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
+                    if (debugOut)
+                        sLog.outDebug("AuctionHouseBot: LoadValues() - minPrice[%u][%u]          = %u", itemClass, itemQuality, config->GetMinPrice(ItemClass(itemClass), ItemQualities(itemQuality)));
+                }
             }
             break;
         case AHB_VECTOR_ID_MAXPRICE:
-            for(int itemQuality = 0; itemQuality < vectorSize; ++itemQuality, ++iter)
+            for(uint8 itemClass = 0; itemClass < vectorColumn; ++itemClass, ++iter)
             {
-                config->SetMaxPrice(ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
-                if (debugOut)
-                    sLog.outDebug("AuctionHouseBot: LoadValues() - maxPrice[%u]          = %u", itemQuality, config->GetMaxPrice(ItemQualities(itemQuality)));
+                for(int itemQuality = 0; itemQuality < vectorRow; ++itemQuality, ++iter)
+                {
+                    config->SetMaxPrice(ItemClass(itemClass), ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
+                    if (debugOut)
+                        sLog.outDebug("AuctionHouseBot: LoadValues() - maxPrice[%u][%u]          = %u", itemClass, itemQuality, config->GetMaxPrice(ItemClass(itemClass), ItemQualities(itemQuality)));
+                }
             }
             break;
         case AHB_VECTOR_ID_MINBIDPRICE:
-            for(int itemQuality = 0; itemQuality < vectorSize; ++itemQuality, ++iter)
+            for(uint8 itemClass = 0; itemClass < vectorColumn; ++itemClass, ++iter)
             {
-                config->SetMinBidPrice(ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
-                if (debugOut)
-                    sLog.outDebug("AuctionHouseBot: LoadValues() - minBidPrice[%u]       = %u", itemQuality, config->GetMinBidPrice(ItemQualities(itemQuality)));
+                for(int itemQuality = 0; itemQuality < vectorRow; ++itemQuality, ++iter)
+                {
+                    config->SetMinBidPrice(ItemClass(itemClass), ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
+                    if (debugOut)
+                        sLog.outDebug("AuctionHouseBot: LoadValues() - minBidPrice[%u][%u]       = %u", itemClass, itemQuality, config->GetMinBidPrice(ItemClass(itemClass), ItemQualities(itemQuality)));
+                }
             }
             break;
         case AHB_VECTOR_ID_MAXBIDPRICE:
-            for(int itemQuality = 0; itemQuality < vectorSize; ++itemQuality, ++iter)
+            for(uint8 itemClass = 0; itemClass < vectorColumn; ++itemClass, ++iter)
             {
-                config->SetMaxBidPrice(ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
-                if (debugOut)
-                    sLog.outDebug("AuctionHouseBot: LoadValues() - maxBidPrice[%u]       = %u", itemQuality, config->GetMaxBidPrice(ItemQualities(itemQuality)));
+                for(int itemQuality = 0; itemQuality < vectorRow; ++itemQuality, ++iter)
+                {
+                    config->SetMaxBidPrice(ItemClass(itemClass), ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
+                    if (debugOut)
+                        sLog.outDebug("AuctionHouseBot: LoadValues() - maxBidPrice[%u][%u]       = %u", itemClass, itemQuality, config->GetMaxBidPrice(ItemClass(itemClass), ItemQualities(itemQuality)));
+                }
             }
             break;
         case AHB_VECTOR_ID_MAXSTACK:
-            for(int itemQuality = 0; itemQuality < vectorSize; ++itemQuality, ++iter)
+            for(uint8 itemClass = 0; itemClass < vectorColumn; ++itemClass, ++iter)
             {
-                config->SetMaxStack(ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
-                if (debugOut)
-                    sLog.outDebug("AuctionHouseBot: LoadValues() - maxStack[%u]          = %u", itemQuality, config->GetMaxStack(ItemQualities(itemQuality)));
+                for(int itemQuality = 0; itemQuality < vectorRow; ++itemQuality, ++iter)
+                {
+                    config->SetMaxStack(ItemClass(itemClass), ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
+                    if (debugOut)
+                        sLog.outDebug("AuctionHouseBot: LoadValues() - maxStack[%u][%u]          = %u", itemClass, itemQuality, config->GetMaxStack(ItemClass(itemClass), ItemQualities(itemQuality)));
+                }
             }
             break;
         case AHB_VECTOR_ID_BUYERPRICE:
-            for(int itemQuality = 0; itemQuality < vectorSize; ++itemQuality, ++iter)
+            for(uint8 itemClass = 0; itemClass < vectorColumn; ++itemClass, ++iter)
             {
-                config->SetBuyerPrice(ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
-                if (debugOut)
-                    sLog.outDebug("AuctionHouseBot: LoadValues() - buyerPrice[%u]        = %u", itemQuality, config->GetBuyerPrice(ItemQualities(itemQuality)));
+                for(int itemQuality = 0; itemQuality < vectorRow; ++itemQuality, ++iter)
+                {
+                    config->SetBuyerPrice(ItemClass(itemClass), ItemQualities(itemQuality), uint32(atoi(iter->c_str())));
+                    if (debugOut)
+                        sLog.outDebug("AuctionHouseBot: LoadValues() - buyerPrice[%u][%u]        = %u", itemClass, itemQuality, config->GetBuyerPrice(ItemClass(itemClass), ItemQualities(itemQuality)));
+                }
             }
             break;
         default:
@@ -1003,23 +979,43 @@ bool AuctionHouseBot::LoadValues(AHBConfig *config)
     return true;
 }
 
-int AuctionHouseBot::lookupQuality(char color[])
+int AuctionHouseBot::lookupClass(char cClass[])
 {
-    const char* color_table[] =  { "poor", "normal", "uncommon", "rare", "epic", "legendary", "artifact", "heirloom" };
+    const char* class_table[] =  { "consumable", "container", "weapon", "gem", "armor", "reagent", "projectile", "tradegoods", "generic", "recipe", "money", "quiver", "quest", "key", "permanent", "misc", "glyph" };
 
-    for (int itemQuality = 0; itemQuality <= (sizeof color_table); ++itemQuality)
-        if (_strnicmp(color, color_table[itemQuality], 10) == 0)
+    for (int itemClass = 0; itemClass <= (sizeof class_table); ++itemClass)
+        if (_strnicmp(cClass, class_table[itemClass], 10) == 0)
+            return itemClass;
+    return MAX_ITEM_CLASS;
+}
+
+const char* AuctionHouseBot::lookupClass(ItemClass itemClass)
+{
+    const char* class_table[] =  { "Consumable", "Container", "Weapon", "Gem", "Armor", "Reagent", "Projectile", "Tradegoods", "Generic", "Recipe", "Money", "Quiver", "Quest", "Key", "Permanent", "Misc", "Glyph" };
+    const char* undefined[] =  { "Unknown" };
+
+    if (itemClass <= (sizeof class_table))
+        return class_table[itemClass];
+    return undefined[0];
+}
+
+int AuctionHouseBot::lookupQuality(char quality[])
+{
+    const char* quality_table[] =  { "poor", "normal", "uncommon", "rare", "epic", "legendary", "artifact", "heirloom" };
+
+    for (int itemQuality = 0; itemQuality <= (sizeof quality_table); ++itemQuality)
+        if (_strnicmp(quality, quality_table[itemQuality], 10) == 0)
             return itemQuality;
     return MAX_ITEM_QUALITY;
 }
 
 const char* AuctionHouseBot::lookupQuality(ItemQualities itemQuality)
 {
-    const char* color_table[] =  { "Poor", "Normal", "Uncommon", "Rare", "Epic", "Legendary", "Artifact", "Heirloom" };
+    const char* quality_table[] =  { "Poor", "Normal", "Uncommon", "Rare", "Epic", "Legendary", "Artifact", "Heirloom" };
     const char* undefined[] =  { "Unknown" };
 
-    if (itemQuality <= (sizeof color_table))
-        return color_table[itemQuality];
+    if (itemQuality <= (sizeof quality_table))
+        return quality_table[itemQuality];
     return undefined[0];
 }
 
