@@ -1035,7 +1035,7 @@ valid examples:
                     else
                         ++validSequenceIterator;
                 }
-                else
+                else if(commandChar != '|')
                     return false;
             }
         }
