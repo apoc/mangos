@@ -5,7 +5,7 @@
 #include "Config/ConfigEnv.h"
 #include "ace/Vector_T.h"
 
-#define AHB_REVISION "[AHBot-005-Alpha-004]"
+#define AHB_REVISION "[AHBot-005-Alpha-005]"
 
 enum AHBotCommands  // All commands that AHBot supports
 {
@@ -19,10 +19,11 @@ enum AHBotCommands  // All commands that AHBot supports
     AHB_CMD_MAXPRICE        = 7,
     AHB_CMD_MINBIDPRICE     = 8,
     AHB_CMD_MAXBIDPRICE     = 9,
-    AHB_CMD_MAXSTACK        = 10,
-    AHB_CMD_BUYERPRICE      = 11,
-    AHB_CMD_BIDINTERVAL     = 12,
-    AHB_CMD_BIDSPERINTERVAL = 13
+    AHB_CMD_MINSTACK        = 10,
+    AHB_CMD_MAXSTACK        = 11,
+    AHB_CMD_BUYERPRICE      = 12,
+    AHB_CMD_BIDINTERVAL     = 13,
+    AHB_CMD_BIDSPERINTERVAL = 14
 };
 
 enum AHBotVectorIds // All vectors used by AHBot
@@ -253,13 +254,19 @@ private:
     void SetUInt32ValueInDB(uint16, uint32, AHBConfig*);
     uint32 minValue(uint32 a, uint32 b) { return (a <= b) ? a : b; };
 
+    int lookupClass(char[]);
+    const char* lookupClass(ItemClass);
+
+    int lookupQuality(char[]);
+    const char* lookupQuality(ItemQualities);
+
+    int lookupCommand(char[]);
+
 public:
     AuctionHouseBot();
     ~AuctionHouseBot();
 
-    void Command(AHBotCommands, uint32);
-    void Command(AHBotCommands, uint32, char*);
-    void Command(AHBotCommands, uint32, char*, ItemClass, ItemQualities);
+    void Command(const char*, char*);
 
     uint32 GetAHBplayerGUID() { return AHBplayerGUID; };
     
@@ -268,12 +275,6 @@ public:
     bool isValidMapID(uint32);
     
     bool LoadValues(AHBConfig*);
-
-    int lookupClass(char[]);
-    const char* lookupClass(ItemClass);
-    
-    int lookupQuality(char[]);
-    const char* lookupQuality(ItemQualities);
     
     void Update();
 };
