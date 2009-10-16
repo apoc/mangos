@@ -18750,7 +18750,7 @@ void Player::UpdateForQuestWorldObjects()
     {
         if(IS_GAMEOBJECT_GUID(*itr))
         {
-            GameObject *obj = HashMapHolder<GameObject>::Find(*itr);
+            GameObject *obj = GetMap()->GetGameObject(*itr);
             if(obj)
                 obj->BuildValuesUpdateBlockForPlayer(&udata,this);
         }
