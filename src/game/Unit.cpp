@@ -9693,9 +9693,6 @@ bool Unit::isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, boo
             return false;
     }
 
-    if (u->isAlive() && isInvisibleForAlive())
-        return false;
-
     // always seen by owner
     if (GetCharmerOrOwnerGUID()==u->GetGUID())
         return true;
@@ -9756,6 +9753,9 @@ bool Unit::isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, boo
         else
             return true;
     }
+
+    if (u->isAlive() && isInvisibleForAlive())
+        return false;
 
     // non faction visibility non-breakable for non-GMs
     if (m_Visibility == VISIBILITY_OFF)
