@@ -2081,6 +2081,9 @@ Creature* Player::GetNPCIfCanInteractWith(uint64 guid, uint32 npcflagmask)
     if (!unit->isAlive())
         return NULL;
 
+    if (isAlive() && unit->isInvisibleForAlive())
+        return NULL;
+
     // not allow interaction under control, but allow with own pets
     if (unit->GetCharmerGUID())
         return NULL;
