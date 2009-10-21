@@ -9582,7 +9582,7 @@ bool Unit::isTargetableForAttack(bool inverseAlive /*=false*/) const
     if ((isAlive() && !isInvisibleForAlive()) == inverseAlive)
         return false;
 
-    return IsInWorld() && !hasUnitState(UNIT_STAT_DIED)&& !isInFlight() /*&& !isStealth()*/;
+    return IsInWorld() && !hasUnitState(UNIT_STAT_DIED) && !isInFlight();
 }
 
 int32 Unit::ModifyHealth(int32 dVal)
@@ -9741,6 +9741,10 @@ bool Unit::isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, boo
             return false;
     }
 
+    if (u->isAlive() && isInvisibleForAlive())
+        if (u->GetTypeId() == TYPEID_PLAYER && !((Player *)u)->isGameMaster())
+            return false;
+
     // Visible units, always are visible for all units, except for units under invisibility and phases
     if (m_Visibility == VISIBILITY_ON && u->m_invisibilityMask==0 && InSamePhase(u))
         return true;
@@ -9753,9 +9757,6 @@ bool Unit::isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, boo
         else
             return true;
     }
-
-    if (u->isAlive() && isInvisibleForAlive())
-        return false;
 
     // non faction visibility non-breakable for non-GMs
     if (m_Visibility == VISIBILITY_OFF)
