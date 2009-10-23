@@ -1090,11 +1090,12 @@ void Unit::CalculateSpellDamage(SpellNonMeleeDamage *damageInfo, int32 damage, S
         break;
     }
 
+    /*
     if (GetTypeId() == TYPEID_PLAYER && pVictim->GetTypeId() == TYPEID_PLAYER)
     {
         uint32 redunction_affected_damage = CalcNotIgnoreDamageRedunction(damage,damageSchoolMask);
         damage -= ((Player*)pVictim)->GetSpellDamageReduction(redunction_affected_damage);
-    }
+    }*/
 
     // damage mitigation
     if (damage > 0)
@@ -1391,6 +1392,7 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
             break;
     }
 
+    /*
     if (GetTypeId() == TYPEID_PLAYER && pVictim->GetTypeId() == TYPEID_PLAYER)
     {
         uint32 redunction_affected_damage = CalcNotIgnoreDamageRedunction(damage,damageInfo->damageSchoolMask);
@@ -1398,7 +1400,7 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
             damage-=((Player*)pVictim)->GetMeleeDamageReduction(redunction_affected_damage);
         else
             damage-=((Player*)pVictim)->GetRangedDamageReduction(redunction_affected_damage);
-    }
+    }*/
 
     // Calculate absorb resist
     if(int32(damageInfo->damage) > 0)
