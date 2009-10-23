@@ -54,7 +54,7 @@
 
 bool ChatHandler::HandleAHBotOptionsCommand(const char* args)
 {
-    char* message;
+    char message[1024];
     auctionbot.Command(args, message);
     PSendSysMessage(message);
     return true;

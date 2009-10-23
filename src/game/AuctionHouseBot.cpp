@@ -395,7 +395,7 @@ void AuctionHouseBot::Command(const char* args, char* message)
         config = &NeutralConfig;
         break;
     default:
-        strcat(message, "Invalid #ahMapID specified");
+        strcpy(message, "Invalid #ahMapID specified");
         return;
     }
 
@@ -540,7 +540,7 @@ void AuctionHouseBot::Command(const char* args, char* message)
         }
         break;
     default:
-        strcat(message, "AuctionHouseBot: Commands - default reached");
+        strcpy(message, "AuctionHouseBot: Commands - default reached");
         break;
     }
 }
