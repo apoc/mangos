@@ -1747,10 +1747,11 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
                 }
                 GetSession()->SendPacket( &data );
                 SendSavedInstances();
-
-                // remove from old map now
-                if(oldmap) oldmap->Remove(this, false);
             }
+
+            // remove from old map now
+            if(oldmap)
+                oldmap->Remove(this, false);
 
             // new final coordinates
             float final_x = x;
