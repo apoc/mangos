@@ -11113,7 +11113,7 @@ void Unit::CleanupsBeforeDelete()
         RemoveAllDynObjects();
         GetMotionMaster()->Clear(false);                    // remove different non-standard movement generators.
     }
-    RemoveFromWorld();
+    WorldObject::CleanupsBeforeDelete();
 }
 
 CharmInfo* Unit::InitCharmInfo(Unit *charm)
