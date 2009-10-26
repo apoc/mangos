@@ -721,6 +721,11 @@ void Map::Update(const uint32 &t_diff)
 
 void Map::Remove(Player *player, bool remove)
 {
+    if(remove)
+        player->CleanupsBeforeDelete();
+    else
+        player->RemoveFromWorld();
+
     // this may be called during Map::Update
     // after decrement+unlink, ++m_mapRefIter will continue correctly
     // when the first element of the list is being removed
@@ -732,11 +737,6 @@ void Map::Remove(Player *player, bool remove)
     CellPair p = MaNGOS::ComputeCellPair(player->GetPositionX(), player->GetPositionY());
     if(p.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || p.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP)
     {
-        if(remove)
-            player->CleanupsBeforeDelete();
-        else
-            player->RemoveFromWorld();
-
         // invalid coordinates
         player->ResetMap();
 
@@ -757,11 +757,6 @@ void Map::Remove(Player *player, bool remove)
     DEBUG_LOG("Remove player %s from grid[%u,%u]", player->GetName(), cell.GridX(), cell.GridY());
     NGridType *grid = getNGrid(cell.GridX(), cell.GridY());
     assert(grid != NULL);
-
-    if(remove)
-        player->CleanupsBeforeDelete();
-    else
-        player->RemoveFromWorld();
 
     RemoveFromGrid(player,grid,cell);
 
