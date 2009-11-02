@@ -179,8 +179,9 @@ InstanceMap* MapInstanced::CreateInstance(uint32 InstanceId, InstanceSave *save,
     // load/create a map
     Guard guard(*this);
 
+    const MapEntry* entry = sMapStore.LookupEntry(GetId());
     // make sure we have a valid map id
-    if (!sMapStore.LookupEntry(GetId()))
+    if (!entry)
     {
         sLog.outError("CreateInstance: no entry for map %d", GetId());
         assert(false);
