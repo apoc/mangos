@@ -132,6 +132,7 @@ pkgdata_DATA = \
 	8728_01_realmd_account.sql \
 	8749_01_mangos_mail_loot_template.sql \
 	8769_01_mangos_mail_level_reward.sql \
+	8770_01_mangos_quest_template.sql \
 	README
 
 ## Additional files to include when running 'make dist'
@@ -244,4 +245,5 @@ EXTRA_DIST = \
 	8728_01_realmd_account.sql \
 	8749_01_mangos_mail_loot_template.sql \
 	8769_01_mangos_mail_level_reward.sql \
+	8770_01_mangos_quest_template.sql \
 	README
