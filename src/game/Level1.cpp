@@ -1964,7 +1964,7 @@ bool ChatHandler::HandleWhispersCommand(const char* args)
 //Save all players in the world
 bool ChatHandler::HandleSaveAllCommand(const char* /*args*/)
 {
-    ObjectAccessor::Instance().SaveAllPlayers();
+    objaccessor.SaveAllPlayers();
     SendSysMessage(LANG_PLAYERS_SAVED);
     return true;
 }
@@ -2077,7 +2077,7 @@ bool ChatHandler::HandleTeleNameCommand(const char * args)
 
         PSendSysMessage(LANG_TELEPORTING_TO, nameLink.c_str(), GetMangosString(LANG_OFFLINE), tele->name.c_str());
         Player::SavePositionInDB(tele->mapId,tele->position_x,tele->position_y,tele->position_z,tele->orientation,
-            MapManager::Instance().GetZoneId(tele->mapId,tele->position_x,tele->position_y,tele->position_z),target_guid);
+            mapmgr.GetZoneId(tele->mapId,tele->position_x,tele->position_y,tele->position_z),target_guid);
     }
 
     return true;
@@ -2335,7 +2335,7 @@ bool ChatHandler::HandleGoXYCommand(const char* args)
     else
         _player->SaveRecallPosition();
 
-    Map const *map = MapManager::Instance().CreateBaseMap(mapid);
+    Map const *map = mapmgr.CreateBaseMap(mapid);
     float z = std::max(map->GetHeight(x, y, MAX_HEIGHT), map->GetWaterLevel(x, y));
 
     _player->TeleportTo(mapid, x, y, z, _player->GetOrientation());
@@ -2428,7 +2428,7 @@ bool ChatHandler::HandleGoZoneXYCommand(const char* args)
     // update to parent zone if exist (client map show only zones without parents)
     AreaTableEntry const* zoneEntry = areaEntry->zone ? GetAreaEntryByAreaID(areaEntry->zone) : areaEntry;
 
-    Map const *map = MapManager::Instance().CreateBaseMap(zoneEntry->mapid);
+    Map const *map = mapmgr.CreateBaseMap(zoneEntry->mapid);
 
     if(map->Instanceable())
     {
@@ -2503,7 +2503,7 @@ bool ChatHandler::HandleGoGridCommand(const char* args)
     else
         _player->SaveRecallPosition();
 
-    Map const *map = MapManager::Instance().CreateBaseMap(mapid);
+    Map const *map = mapmgr.CreateBaseMap(mapid);
     float z = std::max(map->GetHeight(x, y, MAX_HEIGHT), map->GetWaterLevel(x, y));
     _player->TeleportTo(mapid, x, y, z, _player->GetOrientation());
 
