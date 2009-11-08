@@ -461,7 +461,7 @@ struct SQLCreatureLoader : public SQLStorageLoaderBase<SQLCreatureLoader>
     template<class D>
     void convert_from_str(uint32 /*field_pos*/, char *src, D &dst)
     {
-        dst = D(objmgr.GetScriptId(src));
+        dst = D(sObjectMgr.GetScriptId(src));
     }
 };
 
@@ -1577,7 +1577,7 @@ struct SQLItemLoader : public SQLStorageLoaderBase<SQLItemLoader>
     template<class D>
     void convert_from_str(uint32 /*field_pos*/, char *src, D &dst)
     {
-        dst = D(objmgr.GetScriptId(src));
+        dst = D(sObjectMgr.GetScriptId(src));
     }
 };
 
@@ -2048,7 +2048,7 @@ void ObjectMgr::LoadItemRequiredTarget()
                 if (pItemProto->Spells[i].SpellTrigger == ITEM_SPELLTRIGGER_ON_USE ||
                     pItemProto->Spells[i].SpellTrigger == ITEM_SPELLTRIGGER_ON_NO_DELAY_USE)
                 {
-                    SpellScriptTargetBounds bounds = spellmgr.GetSpellScriptTargetBounds(pSpellInfo->Id);
+                    SpellScriptTargetBounds bounds = sSpellMgr.GetSpellScriptTargetBounds(pSpellInfo->Id);
                     if (bounds.first != bounds.second)
                         break;
 
@@ -3141,7 +3141,7 @@ void ObjectMgr::LoadGroups()
                 continue;
             }
 
-            InstanceSave *save = sInstanceSaveManager.AddInstanceSave(mapEntry->MapID, fields[2].GetUInt32(), fields[4].GetUInt8(), (time_t)fields[5].GetUInt64(), (fields[6].GetUInt32() == 0), true);
+            InstanceSave *save = sInstanceSaveMgr.AddInstanceSave(mapEntry->MapID, fields[2].GetUInt32(), fields[4].GetUInt8(), (time_t)fields[5].GetUInt64(), (fields[6].GetUInt32() == 0), true);
             group->BindToInstance(save, fields[3].GetBool(), true);
         }while( result->NextRow() );
         delete result;
@@ -4016,7 +4016,7 @@ void ObjectMgr::LoadScripts(ScriptMapMap& scripts, char const* tablename)
                     continue;
                 }
 
-                // if(!objmgr.GetMangosStringLocale(tmp.dataint)) will checked after db_script_string loading
+                // if(!sObjectMgr.GetMangosStringLocale(tmp.dataint)) will checked after db_script_string loading
                 break;
             }
 
@@ -4481,7 +4481,7 @@ struct SQLInstanceLoader : public SQLStorageLoaderBase<SQLInstanceLoader>
     template<class D>
     void convert_from_str(uint32 /*field_pos*/, char *src, D &dst)
     {
-        dst = D(objmgr.GetScriptId(src));
+        dst = D(sObjectMgr.GetScriptId(src));
     }
 };
 
@@ -5020,11 +5020,11 @@ uint32 ObjectMgr::GetTaxiMountDisplayId( uint32 id, uint32 team, bool allowed_al
     if (!mount_info)
         return 0;
 
-    uint16 mount_id = objmgr.ChooseDisplayId(team,mount_info);
+    uint16 mount_id = sObjectMgr.ChooseDisplayId(team,mount_info);
     if (!mount_id)
         return 0;
 
-    CreatureModelInfo const *minfo = objmgr.GetCreatureModelRandomGender(mount_id);
+    CreatureModelInfo const *minfo = sObjectMgr.GetCreatureModelRandomGender(mount_id);
     if (minfo)
         mount_id = minfo->modelid;
 
@@ -5141,7 +5141,7 @@ void ObjectMgr::LoadGraveyardZones()
 WorldSafeLocsEntry const *ObjectMgr::GetClosestGraveYard(float x, float y, float z, uint32 MapId, uint32 team)
 {
     // search for zone associated closest graveyard
-    uint32 zoneId = mapmgr.GetZoneId(MapId,x,y,z);
+    uint32 zoneId = sMapMgr.GetZoneId(MapId,x,y,z);
 
     // Simulate std. algorithm:
     //   found some graveyard associated to (ghost_zone,ghost_map)
@@ -5743,7 +5743,7 @@ struct SQLGameObjectLoader : public SQLStorageLoaderBase<SQLGameObjectLoader>
     template<class D>
     void convert_from_str(uint32 /*field_pos*/, char *src, D &dst)
     {
-        dst = D(objmgr.GetScriptId(src));
+        dst = D(sObjectMgr.GetScriptId(src));
     }
 };
 
@@ -6134,7 +6134,7 @@ void ObjectMgr::LoadCorpses()
             continue;
         }
 
-        objaccessor.AddCorpse(corpse);
+        sObjectAccessor.AddCorpse(corpse);
 
         ++count;
     }
@@ -7258,7 +7258,7 @@ bool PlayerCondition::IsValid(ConditionType condition, uint32 value1, uint32 val
         case CONDITION_QUESTREWARDED:
         case CONDITION_QUESTTAKEN:
         {
-            Quest const *Quest = objmgr.GetQuestTemplate(value1);
+            Quest const *Quest = sObjectMgr.GetQuestTemplate(value1);
             if (!Quest)
             {
                 sLog.outErrorDb("Quest condition specifies non-existing quest (%u), skipped", value1);
@@ -7995,7 +7995,7 @@ void ObjectMgr::LoadDbScriptStrings()
     CheckScripts(sGameObjectScripts,ids);
     CheckScripts(sEventScripts,ids);
 
-    WaypointMgr.CheckTextsExistance(ids);
+    sWaypointMgr.CheckTextsExistance(ids);
 
     for(std::set<int32>::const_iterator itr = ids.begin(); itr != ids.end(); ++itr)
         sLog.outErrorDb( "Table `db_script_string` has unused string id  %u", *itr);
@@ -8004,7 +8004,7 @@ void ObjectMgr::LoadDbScriptStrings()
 // Functions for scripting access
 uint32 GetAreaTriggerScriptId(uint32 trigger_id)
 {
-    return objmgr.GetAreaTriggerScriptId(trigger_id);
+    return sObjectMgr.GetAreaTriggerScriptId(trigger_id);
 }
 
 bool LoadMangosStrings(DatabaseType& db, char const* table,int32 start_value, int32 end_value)
@@ -8017,17 +8017,17 @@ bool LoadMangosStrings(DatabaseType& db, char const* table,int32 start_value, in
         return false;
     }
 
-    return objmgr.LoadMangosStrings(db,table,start_value,end_value);
+    return sObjectMgr.LoadMangosStrings(db,table,start_value,end_value);
 }
 
 uint32 MANGOS_DLL_SPEC GetScriptId(const char *name)
 {
-    return objmgr.GetScriptId(name);
+    return sObjectMgr.GetScriptId(name);
 }
 
 ObjectMgr::ScriptNameMap & GetScriptNames()
 {
-    return objmgr.GetScriptNames();
+    return sObjectMgr.GetScriptNames();
 }
 
 CreatureInfo const* GetCreatureTemplateStore(uint32 entry)
@@ -8037,5 +8037,5 @@ CreatureInfo const* GetCreatureTemplateStore(uint32 entry)
 
 Quest const* GetQuestTemplateStore(uint32 entry)
 {
-    return objmgr.GetQuestTemplate(entry);
+    return sObjectMgr.GetQuestTemplate(entry);
 }
