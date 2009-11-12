@@ -325,15 +325,6 @@ bool World::RemoveQueuedPlayer(WorldSession* sess)
         pop_sess->SetInQueue(false);
         pop_sess->SendAuthWaitQue(0);
 
-        pop_sess->SendAddonsInfo();
-
-        WorldPacket pkt(SMSG_CLIENTCACHE_VERSION, 4);
-        pkt << uint32(getConfig(CONFIG_CLIENTCACHE_VERSION));
-        pop_sess->SendPacket(&pkt);
-
-        pop_sess->SendAccountDataTimes(GLOBAL_CACHE_MASK);
-        pop_sess->SendTutorialsData();
-
         m_QueuedPlayer.pop_front();
 
         // update iter to point first queued socket or end() if queue is empty now
