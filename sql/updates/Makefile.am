@@ -134,6 +134,7 @@ pkgdata_DATA = \
 	8769_01_mangos_mail_level_reward.sql \
 	8770_01_mangos_quest_template.sql \
 	8800_01_mangos_spell_elixir.sql \
+	8815_01_mangos_mangos_string.sql \
 	README
 
 ## Additional files to include when running 'make dist'
@@ -248,4 +249,5 @@ EXTRA_DIST = \
 	8769_01_mangos_mail_level_reward.sql \
 	8770_01_mangos_quest_template.sql \
 	8800_01_mangos_spell_elixir.sql \
+	8815_01_mangos_mangos_string.sql \
 	README
