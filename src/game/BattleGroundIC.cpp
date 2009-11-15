@@ -18,10 +18,10 @@
 
 #include "Player.h"
 #include "BattleGround.h"
-#include "BattleGroundSA.h"
+#include "BattleGroundIC.h"
 #include "Language.h"
 
-BattleGroundSA::BattleGroundSA()
+BattleGroundIC::BattleGroundIC()
 {
     //TODO FIX ME!
     m_StartMessageIds[BG_STARTING_EVENT_FIRST]  = 0;
@@ -30,49 +30,50 @@ BattleGroundSA::BattleGroundSA()
     m_StartMessageIds[BG_STARTING_EVENT_FOURTH] = LANG_BG_WS_HAS_BEGUN;
 }
 
-BattleGroundSA::~BattleGroundSA()
+BattleGroundIC::~BattleGroundIC()
 {
 
 }
 
-void BattleGroundSA::Update(uint32 diff)
+void BattleGroundIC::Update(uint32 diff)
 {
     BattleGround::Update(diff);
 }
 
-void BattleGroundSA::StartingEventCloseDoors()
+void BattleGroundIC::StartingEventCloseDoors()
 {
 }
 
-void BattleGroundSA::StartingEventOpenDoors()
+void BattleGroundIC::StartingEventOpenDoors()
 {
 }
 
-void BattleGroundSA::AddPlayer(Player *plr)
+void BattleGroundIC::AddPlayer(Player *plr)
 {
     BattleGround::AddPlayer(plr);
     //create score and add it to map, default values are set in constructor
-    BattleGroundSAScore* sc = new BattleGroundSAScore;
+    BattleGroundICScore* sc = new BattleGroundICScore;
 
     m_PlayerScores[plr->GetGUID()] = sc;
 }
 
-void BattleGroundSA::RemovePlayer(Player* /*plr*/,uint64 /*guid*/)
+void BattleGroundIC::RemovePlayer(Player* /*plr*/,uint64 /*guid*/)
 {
 
 }
 
-void BattleGroundSA::HandleAreaTrigger(Player * /*Source*/, uint32 /*Trigger*/)
+void BattleGroundIC::HandleAreaTrigger(Player * /*Source*/, uint32 /*Trigger*/)
 {
     // this is wrong way to implement these things. On official it done by gameobject spell cast.
     if (GetStatus() != STATUS_IN_PROGRESS)
         return;
 }
 
-void BattleGroundSA::UpdatePlayerScore(Player* Source, uint32 type, uint32 value)
+void BattleGroundIC::UpdatePlayerScore(Player* Source, uint32 type, uint32 value)
 {
 
-    BattleGroundScoreMap::iterator itr = m_PlayerScores.find(Source->GetGUID());
+    std::map<uint64, BattleGroundScore*>::iterator itr = m_PlayerScores.find(Source->GetGUID());
+
     if(itr == m_PlayerScores.end())                         // player not found...
         return;
 
