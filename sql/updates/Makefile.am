@@ -136,6 +136,7 @@ pkgdata_DATA = \
 	8800_01_mangos_spell_elixir.sql \
 	8815_01_mangos_mangos_string.sql \
 	8818_01_mangos_mangos_string.sql \
+	8833_02_mangos_command.sql \
 	README
 
 ## Additional files to include when running 'make dist'
@@ -252,4 +253,5 @@ EXTRA_DIST = \
 	8800_01_mangos_spell_elixir.sql \
 	8815_01_mangos_mangos_string.sql \
 	8818_01_mangos_mangos_string.sql \
+	8833_02_mangos_command.sql \
 	README
