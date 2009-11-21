@@ -2475,7 +2475,21 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
             break;
         }
         case SPELLFAMILY_MAGE:
+            break;
+        case SPELLFAMILY_WARLOCK:
         {
+            // Haunt 
+            if (GetSpellProto()->SpellIconID == 3172 && (GetSpellProto()->SpellFamilyFlags & UI64LIT(0x0004000000000000)))
+            {
+                // NOTE: for avoid use additional field damage stored in dummy value (replace unused 100%
+                if (apply)
+                    m_modifier.m_amount = 0;                // use value as damage counter instead redundent 100% percent
+                else
+                {
+                    int32 bp0 = m_modifier.m_amount;
+                    caster->CastCustomSpell(caster,48210,&bp0,NULL,NULL,true);
+                }
+            }
             break;
         }
         case SPELLFAMILY_PRIEST:
@@ -2496,20 +2510,6 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                     m_spellmod = mod;
                 }
                 ((Player*)m_target)->AddSpellMod(m_spellmod, apply);
-                return;
-            }
-            break;
-        }
-        case SPELLFAMILY_PALADIN:
-        {
-            // Beacon of Light
-            if (GetId() == 53563)
-            {
-                if(apply)
-                    // original caster must be target (beacon)
-                    m_target->CastSpell(m_target,53651,true,NULL,this,m_target->GetGUID());
-                else
-                    m_target->RemoveAurasByCasterSpell(53651,m_target->GetGUID());
                 return;
             }
             break;
@@ -2643,6 +2643,8 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
             break;
         }
         case SPELLFAMILY_HUNTER:
+            break;
+        case SPELLFAMILY_PALADIN:
             break;
         case SPELLFAMILY_SHAMAN:
         {
