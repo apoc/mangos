@@ -209,6 +209,9 @@ void Unit::Update( uint32 p_time )
         delete *itr;
     m_deletedAuras.clear();
 
+    if (CanHaveThreatList())
+        getThreatManager().UpdateForClient(p_time);
+
     // update combat timer only for players and pets
     if (isInCombat() && (GetTypeId() == TYPEID_PLAYER || ((Creature*)this)->isPet() || ((Creature*)this)->isCharmed()))
     {
@@ -10428,6 +10431,8 @@ void Unit::AddThreat(Unit* pVictim, float threat /*= 0.0f*/, bool crit /*= false
 
 void Unit::DeleteThreatList()
 {
+    if(CanHaveThreatList() && !m_ThreatManager.isThreatListEmpty())
+        SendThreatClear();
     m_ThreatManager.clearReferences();
 }
 
@@ -12768,4 +12773,81 @@ void Unit::KnockBackFrom(Unit* target, float horizintalSpeed, float verticalSpee
         //       with CreatureRelocation at server side
         NearTeleportTo(fx, fy, fz, GetOrientation(), this == target);
     }
+}
+
+float Unit::GetCombatRatingReduction(CombatRating cr) const
+{
+    if (GetTypeId() == TYPEID_PLAYER)
+        return ((Player const*)this)->GetRatingBonusValue(cr);
+    else if (((Creature const*)this)->isPet())
+    {
+        // Player's pet have 0.4 resilience  from owner
+        if (Unit* owner = GetOwner())
+            if(owner->GetTypeId() == TYPEID_PLAYER)
+                return ((Player*)owner)->GetRatingBonusValue(cr) * 0.4f;
+    }
+
+    return 0.0f;
+}
+
+uint32 Unit::GetCombatRatingDamageReduction(CombatRating cr, float rate, float cap, uint32 damage) const
+{
+    float percent = GetCombatRatingReduction(cr) * rate;
+    if (percent > cap)
+        percent = cap;
+    return uint32 (percent * damage / 100.0f);
+}
+
+void Unit::SendThreatUpdate()
+{
+    if (uint32 count = getThreatManager().getThreatList().size())
+    {
+        sLog.outDebug( "WORLD: Send SMSG_THREAT_UPDATE Message" );
+        WorldPacket data(SMSG_THREAT_UPDATE, 8 + count * 8);
+        data.append(GetPackGUID());
+        data << uint32(count);
+        ThreatList& tlist = getThreatManager().getThreatList();
+        for (ThreatList::const_iterator itr = tlist.begin(); itr != tlist.end(); ++itr)
+        {
+            data.appendPackGUID((*itr)->getUnitGuid());
+            data << uint32((*itr)->getThreat());
+        }
+        SendMessageToSet(&data, false);
+    }
+}
+
+void Unit::SendHighestThreatUpdate(HostileReference* pHostilReference)
+{
+    if (uint32 count = getThreatManager().getThreatList().size())
+    {
+        sLog.outDebug( "WORLD: Send SMSG_HIGHEST_THREAT_UPDATE Message" );
+        WorldPacket data(SMSG_HIGHEST_THREAT_UPDATE, 8 + 8 + count * 8);
+        data.append(GetPackGUID());
+        data.appendPackGUID(pHostilReference->getUnitGuid());
+        data << uint32(count);
+        ThreatList const& tlist = getThreatManager().getThreatList();
+        for (ThreatList::const_iterator itr = tlist.begin(); itr != tlist.end(); ++itr)
+        {
+            data.appendPackGUID((*itr)->getUnitGuid());
+            data << uint32((*itr)->getThreat());
+        }
+        SendMessageToSet(&data, false);
+    }
+}
+
+void Unit::SendThreatClear()
+{
+    sLog.outDebug( "WORLD: Send SMSG_THREAT_CLEAR Message" );
+    WorldPacket data(SMSG_THREAT_CLEAR, 8);
+    data.append(GetPackGUID());
+    SendMessageToSet(&data, false);
+}
+
+void Unit::SendThreatRemove(HostileReference* pHostileReference)
+{
+    sLog.outDebug( "WORLD: Send SMSG_THREAT_REMOVE Message" );
+    WorldPacket data(SMSG_THREAT_REMOVE, 8 + 8);
+    data.append(GetPackGUID());
+    data.appendPackGUID(pHostileReference->getUnitGuid());
+    SendMessageToSet(&data, false);
 }
