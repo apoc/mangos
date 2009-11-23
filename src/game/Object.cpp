@@ -182,7 +182,7 @@ void Object::BuildCreateUpdateBlockForPlayer(UpdateData *data, Player *target) c
         if(isType(TYPEMASK_UNIT))
         {
             if(((Unit*)this)->getVictim())
-                flags |= UPDATEFLAG_HAS_TARGET;
+                flags |= UPDATEFLAG_HAS_ATTACKING_TARGET;
         }
     }
 
@@ -546,12 +546,12 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 flags, uint32 flags2)
     }
 
     // 0x4
-    if(flags & UPDATEFLAG_HAS_TARGET)                       // packed guid (current target guid)
+    if(flags & UPDATEFLAG_HAS_ATTACKING_TARGET)             // packed guid (current target guid)
     {
-        if(Unit *victim = ((Unit*)this)->getVictim())
-            data->append(victim->GetPackGUID());
+        if (((Unit*)this)->getVictim())
+            data->append(((Unit*)this)->getVictim()->GetPackGUID());
         else
-            *data << uint8(0);
+            data->appendPackGUID(0);
     }
 
     // 0x2
