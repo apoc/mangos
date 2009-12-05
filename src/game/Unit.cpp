@@ -12895,29 +12895,6 @@ void Unit::KnockBackFrom(Unit* target, float horizintalSpeed, float verticalSpee
     }
 }
 
-float Unit::GetCombatRatingReduction(CombatRating cr) const
-{
-    if (GetTypeId() == TYPEID_PLAYER)
-        return ((Player const*)this)->GetRatingBonusValue(cr);
-    else if (((Creature const*)this)->isPet())
-    {
-        // Player's pet have 0.4 resilience  from owner
-        if (Unit* owner = GetOwner())
-            if(owner->GetTypeId() == TYPEID_PLAYER)
-                return ((Player*)owner)->GetRatingBonusValue(cr) * 0.4f;
-    }
-
-    return 0.0f;
-}
-
-uint32 Unit::GetCombatRatingDamageReduction(CombatRating cr, float rate, float cap, uint32 damage) const
-{
-    float percent = GetCombatRatingReduction(cr) * rate;
-    if (percent > cap)
-        percent = cap;
-    return uint32 (percent * damage / 100.0f);
-}
-
 void Unit::SendThreatUpdate()
 {
     ThreatList const& tlist = getThreatManager().getThreatList();
