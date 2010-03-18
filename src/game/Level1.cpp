@@ -310,8 +310,20 @@ bool ChatHandler::HandleGPSCommand(const char* args)
     int gx=63-p.x_coord;
     int gy=63-p.y_coord;
 
-    uint32 have_map = GridMap::ExistMap(obj->GetMapId(),gx,gy) ? 1 : 0;
-    uint32 have_vmap = GridMap::ExistVMap(obj->GetMapId(),gx,gy) ? 1 : 0;
+    uint32 have_map = Map::ExistMap(obj->GetMapId(),gx,gy) ? 1 : 0;
+    uint32 have_vmap = Map::ExistVMap(obj->GetMapId(),gx,gy) ? 1 : 0;
+    
+    if(have_vmap)
+    {
+        uint32 areaID, flags;
+        if(map->GetAreaInfo(obj->GetPositionX(), obj->GetPositionY(), obj->GetPositionZ(), areaID, flags))
+        {
+            AreaTableEntry const* areaEntry2 = GetAreaEntryByAreaID(areaID);
+            PSendSysMessage("your VMAP area is '%s', flags:%8X", areaEntry2 ? areaEntry2->area_name[GetSessionDbcLocale()] : "<unknown>", flags);
+        }
+        else PSendSysMessage("no VMAP area info available");
+    }
+    else PSendSysMessage("no VMAP available for area info");
 
     PSendSysMessage(LANG_MAP_POSITION,
         obj->GetMapId(), (mapEntry ? mapEntry->name[GetSessionDbcLocale()] : "<unknown>" ),
