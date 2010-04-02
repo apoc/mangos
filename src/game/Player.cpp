@@ -1465,6 +1465,13 @@ void Player::Update( uint32 p_time )
     UpdateEnchantTime(p_time);
     UpdateHomebindTime(p_time);
 
+    if(sWorld.getConfig(CONFIG_UINT32_VMAP_INDOOR_INTERVAL) &&
+       (m_IndoorCheckTimer+=p_time) >=  sWorld.getConfig(CONFIG_UINT32_VMAP_INDOOR_INTERVAL))
+    {
+        PerformIndoorCheck();
+    }
+
+
     // group update
     SendUpdateToOutOfRangeGroupMembers();
 
@@ -22151,3 +22158,13 @@ void Player::SetRestType( RestType n_r_type, uint32 areaTriggerId /*= 0*/)
             SetFFAPvP(false);
     }
 }
+
+void Player::PerformIndoorCheck()
+{
+    if(!GetMap()->IsOutdoors(GetPositionX(), GetPositionY(), GetPositionZ()))
+    {
+        RemoveAurasWithAttribute(SPELL_ATTR_OUTDOORS_ONLY);
+    }
+    m_IndoorCheckTimer ^= m_IndoorCheckTimer;
+}
+
