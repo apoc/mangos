@@ -1082,18 +1082,18 @@ bool Map::IsOutdoors(float x, float y, float z) const
     if(!GetAreaInfo(x, y, z, mogpFlags, adtId, rootId, groupId))
         return true;
 
-    sLog.outDebug("Got AreaInfo: flag %u, adt %i, root %i, group %i\n", mogpFlags, adtId, rootId, groupId);
+    DEBUG_LOG("Got AreaInfo: flag %u, adt %i, root %i, group %i", mogpFlags, adtId, rootId, groupId);
     bool outdoor = true;
 
     WMOAreaTableEntry const* wmoEntry= GetWMOAreaTableEntryByTripple(rootId, adtId, groupId);
     if(wmoEntry)
     {
-        sLog.outDebug("Got WMOAreaTableEntry! flag %u, areaid %u\n", wmoEntry->Flags, wmoEntry->areaId);
+        DEBUG_LOG("Got WMOAreaTableEntry! flag %u, areaid %u", wmoEntry->Flags, wmoEntry->areaId);
 
         AreaTableEntry const* atEntry = GetAreaEntryByAreaID(wmoEntry->areaId);
         if(atEntry)
         {
-            sLog.outDebug("Got AreaTableEntry\n");
+            DEBUG_LOG("Got AreaTableEntry");
             if(atEntry->flags & AREA_FLAG_OUTSIDE)
                 return true;
             if(atEntry->flags & AREA_FLAG_INSIDE)
@@ -1172,16 +1172,17 @@ GridMapLiquidStatus Map::getLiquidStatus(float x, float y, float z, uint8 ReqLiq
     ZLiquidStatus result = LIQUID_MAP_NO_WATER;
     VMAP::IVMapManager* vmgr = VMAP::VMapFactory::createOrGetVMapManager();
     float liquid_level, ground_level = INVALID_HEIGHT;
-    if (vmgr->GetLiquidLevel(GetId(), x, y, z, ReqLiquidType, liquid_level, ground_level))
+    uint32 liquid_type;
+    if (vmgr->GetLiquidLevel(GetId(), x, y, z, ReqLiquidType, liquid_level, ground_level, liquid_type))
     {
-        sLog.outDebug("getLiquidStatus(): vmap liquid level: %f ground: %f", liquid_level, ground_level);
+        DEBUG_LOG("getLiquidStatus(): vmap liquid level: %f ground: %f type: %u", liquid_level, ground_level, liquid_type);
         // Check water level and ground level
         if (liquid_level > ground_level && z > ground_level - 2)
         {
             // All ok in water -> store data
             if (data)
             {
-                data->type  = MAP_LIQUID_TYPE_WATER; // no type available yet...
+                data->type  = liquid_type;
                 data->level = liquid_level;
                 data->depth_level = ground_level;
             }
