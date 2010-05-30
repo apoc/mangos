@@ -1467,13 +1467,6 @@ void Player::Update( uint32 p_time )
     UpdateEnchantTime(p_time);
     UpdateHomebindTime(p_time);
 
-    if(sWorld.getConfig(CONFIG_UINT32_VMAP_INDOOR_INTERVAL) &&
-       (m_IndoorCheckTimer+=p_time) >=  sWorld.getConfig(CONFIG_UINT32_VMAP_INDOOR_INTERVAL))
-    {
-        PerformIndoorCheck();
-    }
-
-
     // group update
     SendUpdateToOutOfRangeGroupMembers();
 
@@ -6069,7 +6062,7 @@ bool Player::SetPosition(float x, float y, float z, float orientation, bool tele
     // code block for underwater state update
     UpdateUnderwaterState(m, x, y, z);
 
-    CheckExploreSystem();
+    CheckAreaExploreAndOutdoor();
 
     return true;
 }
@@ -6131,7 +6124,7 @@ void Player::SendMovieStart(uint32 MovieId)
     SendDirectMessage(&data);
 }
 
-void Player::CheckExploreSystem()
+void Player::CheckAreaExploreAndOutdoor()
 {
     if (!isAlive())
         return;
@@ -6139,12 +6132,17 @@ void Player::CheckExploreSystem()
     if (isInFlight())
         return;
 
-    uint16 areaFlag = GetBaseMap()->GetAreaFlag(GetPositionX(),GetPositionY(),GetPositionZ());
-    if(areaFlag==0xffff)
+    bool isOutdoor;
+    uint16 areaFlag = GetBaseMap()->GetAreaFlag(GetPositionX(),GetPositionY(),GetPositionZ(), &isOutdoor);
+
+    if (sWorld.getConfig(CONFIG_BOOL_VMAP_INDOOR_CHECK) && !isOutdoor)
+        RemoveAurasWithAttribute(SPELL_ATTR_OUTDOORS_ONLY);
+
+    if (areaFlag==0xffff)
         return;
     int offset = areaFlag / 32;
 
-    if(offset >= PLAYER_EXPLORED_ZONES_SIZE)
+    if (offset >= PLAYER_EXPLORED_ZONES_SIZE)
     {
         sLog.outError("Wrong area flag %u in map data for (X: %f Y: %f) point to field PLAYER_EXPLORED_ZONES_1 + %u ( %u must be < %u ).",areaFlag,GetPositionX(),GetPositionY(),offset,offset, PLAYER_EXPLORED_ZONES_SIZE);
         return;
@@ -6153,7 +6151,7 @@ void Player::CheckExploreSystem()
     uint32 val = (uint32)(1 << (areaFlag % 32));
     uint32 currFields = GetUInt32Value(PLAYER_EXPLORED_ZONES_1 + offset);
 
-    if( !(currFields & val) )
+    if (!(currFields & val))
     {
         SetUInt32Value(PLAYER_EXPLORED_ZONES_1 + offset, (uint32)(currFields | val));
 
