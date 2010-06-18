@@ -40,7 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\..\libmpq;..\..\..\..\dep\include\zlib;..\..\..\libmpq\win"
+				AdditionalIncludeDirectories="..\..\..\..\dep\libmpq;..\..\..\..\dep\include\zlib;..\..\..\..\dep\libmpq\win"
 				PreprocessorDefinitions="WIN32;USE_LIBMPQ04"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -60,7 +60,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="libmpq.lib"
-				AdditionalLibraryDirectories="..\..\..\libmpq\bin\$(PlatformName)_$(ConfigurationName)"
+				AdditionalLibraryDirectories="..\..\..\..\dep\libmpq\bin\$(PlatformName)_$(ConfigurationName)"
 				GenerateDebugInformation="true"
 				TargetMachine="1"
 			/>
@@ -113,7 +113,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="..\..\..\libmpq;..\..\..\..\dep\include\zlib;..\..\..\libmpq\win"
+				AdditionalIncludeDirectories="..\..\..\..\dep\libmpq;..\..\..\..\dep\include\zlib;..\..\..\..\dep\libmpq\win"
 				PreprocessorDefinitions="WIN32;USE_LIBMPQ04"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -132,7 +132,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="libmpq.lib"
-				AdditionalLibraryDirectories="..\..\..\libmpq\bin\$(PlatformName)_$(ConfigurationName)"
+				AdditionalLibraryDirectories="..\..\..\..\dep\libmpq\bin\$(PlatformName)_$(ConfigurationName)"
 				GenerateDebugInformation="true"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
