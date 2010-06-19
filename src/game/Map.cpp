@@ -1186,7 +1186,7 @@ uint8 Map::GetTerrainType(float x, float y ) const
 
 GridMapLiquidStatus Map::getLiquidStatus(float x, float y, float z, uint8 ReqLiquidType, GridMapLiquidData *data) const
 {
-    ZLiquidStatus result = LIQUID_MAP_NO_WATER;
+    GridMapLiquidStatus result = LIQUID_MAP_NO_WATER;
     VMAP::IVMapManager* vmgr = VMAP::VMapFactory::createOrGetVMapManager();
     float liquid_level, ground_level = INVALID_HEIGHT;
     uint32 liquid_type;
@@ -1219,8 +1219,8 @@ GridMapLiquidStatus Map::getLiquidStatus(float x, float y, float z, uint8 ReqLiq
     }
     if(GridMap* gmap = const_cast<Map*>(this)->GetGrid(x, y))
     {
-        LiquidData map_data;
-        ZLiquidStatus map_result = gmap->getLiquidStatus(x, y, z, ReqLiquidType, &map_data);
+        GridMapLiquidData map_data;
+        GridMapLiquidStatus map_result = gmap->getLiquidStatus(x, y, z, ReqLiquidType, &map_data);
         // Not override LIQUID_MAP_ABOVE_WATER with LIQUID_MAP_NO_WATER:
         if (map_result != LIQUID_MAP_NO_WATER && (map_data.level > ground_level))
         {
@@ -1268,14 +1268,14 @@ void Map::GetZoneAndAreaIdByAreaFlag(uint32& zoneid, uint32& areaid, uint16 area
     zoneid = entry ? (( entry->zone != 0 ) ? entry->zone : entry->ID) : 0;
 }
 
-bool Map::IsInWater(float x, float y, float pZ, LiquidData *data) const
+bool Map::IsInWater(float x, float y, float pZ, GridMapLiquidData *data) const
 {
     // Check surface in x, y point for liquid
     if (const_cast<Map*>(this)->GetGrid(x, y))
     {
-        LiquidData liquid_status;
-        LiquidData *liquid_prt = data ? data : &liquid_status;
-        if (getLiquidStatus(x, y, pZ, MAP_ALL_LIQUIDS, liquid_prt))
+        GridMapLiquidData liquid_status;
+        GridMapLiquidData *liquid_ptr = data ? data : &liquid_status;
+        if (getLiquidStatus(x, y, pZ, MAP_ALL_LIQUIDS, liquid_ptr))
         {
             //if (liquid_prt->level - liquid_prt->depth_level > 2) //???
                 return true;

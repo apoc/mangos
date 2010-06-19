@@ -22158,13 +22158,3 @@ void Player::SetRestType( RestType n_r_type, uint32 areaTriggerId /*= 0*/)
             SetFFAPvP(false);
     }
 }
-
-void Player::PerformIndoorCheck()
-{
-    if(!GetMap()->IsOutdoors(GetPositionX(), GetPositionY(), GetPositionZ()))
-    {
-        RemoveAurasWithAttribute(SPELL_ATTR_OUTDOORS_ONLY);
-    }
-    m_IndoorCheckTimer ^= m_IndoorCheckTimer;
-}
-
